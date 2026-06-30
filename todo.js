@@ -33,6 +33,20 @@ class TodoApp {
         if (themeToggle) {
             themeToggle.addEventListener('click', () => this.toggleTheme());
         }
+
+        // Accent color picker toggle
+        const accentColorBtn = document.getElementById('accentColorBtn');
+        if (accentColorBtn) {
+            accentColorBtn.addEventListener('click', (e) => this.toggleAccentDropdown(e));
+        }
+
+        // Close dropdowns on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.accent-picker-wrapper')) {
+                const dropdown = document.getElementById('accentColorDropdown');
+                if (dropdown) dropdown.classList.remove('show');
+            }
+        });
     }
 
     openModal(task = null) {
@@ -221,12 +235,116 @@ class TodoApp {
         if (savedTheme === 'dark') {
             document.body.classList.add('dark-theme');
         }
+
+        const accentColor = localStorage.getItem('accentColor');
+        if (accentColor) {
+            const isDark = savedTheme === 'dark';
+            if (isDark && accentColor === '#1C1917') {
+                this.setAccentColor('#FF6B35');
+            } else if (!isDark && accentColor === '#FFFFFF') {
+                this.setAccentColor('#FF6B35');
+            } else {
+                this.setAccentColor(accentColor);
+            }
+        }
     }
 
     toggleTheme() {
         document.body.classList.toggle('dark-theme');
         const isDark = document.body.classList.contains('dark-theme');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+        const accentColor = localStorage.getItem('accentColor');
+        if (isDark && accentColor === '#1C1917') {
+            this.setAccentColor('#FF6B35');
+        } else if (!isDark && accentColor === '#FFFFFF') {
+            this.setAccentColor('#FF6B35');
+        }
+
+        this.renderAccentDropdown();
+    }
+
+    toggleAccentDropdown(event) {
+        if (event) event.stopPropagation();
+        
+        const dropdown = document.getElementById('accentColorDropdown');
+        if (dropdown) {
+            dropdown.classList.toggle('show');
+            if (dropdown.classList.contains('show')) {
+                this.renderAccentDropdown();
+            }
+        }
+    }
+
+    renderAccentDropdown() {
+        const dropdown = document.getElementById('accentColorDropdown');
+        if (!dropdown) return;
+
+        const isDark = document.body.classList.contains('dark-theme');
+        const savedColor = localStorage.getItem('accentColor') || '#FF6B35';
+
+        const allOptions = [
+            { name: 'Orange', hex: '#FF6B35' },
+            { name: 'Blue', hex: '#4A90E2' },
+            { name: 'Purple', hex: '#8A2BE2' },
+            { name: 'White', hex: '#FFFFFF', darkOnly: true },
+            { name: 'Black', hex: '#1C1917', lightOnly: true }
+        ];
+
+        const options = allOptions.filter(opt => {
+            if (opt.darkOnly && !isDark) return false;
+            if (opt.lightOnly && isDark) return false;
+            return true;
+        });
+
+        dropdown.innerHTML = `
+            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: 700; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--color-border); text-transform: uppercase; letter-spacing: 0.5px;">Accent Theme</div>
+            ${options.map(opt => {
+                const isActive = savedColor.toUpperCase() === opt.hex.toUpperCase();
+                return `
+                    <button class="accent-color-option ${isActive ? 'active' : ''}" onclick="todoApp.selectAccentColor('${opt.hex}')">
+                        <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${opt.hex}; border: 1px solid ${opt.hex === '#FFFFFF' ? '#78716C' : 'transparent'};"></span>
+                        <span style="flex: 1; font-weight: 600;">${opt.name}</span>
+                        ${isActive ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8L6 11L13 4"/></svg>' : ''}
+                    </button>
+                `;
+            }).join('')}
+        `;
+    }
+
+    selectAccentColor(hex) {
+        this.setAccentColor(hex);
+        this.renderAccentDropdown();
+    }
+
+    setAccentColor(hex) {
+        const root = document.documentElement;
+        root.style.setProperty('--color-primary', hex);
+        root.style.setProperty('--color-primary-light', this.adjustColorBrightness(hex, 15));
+        root.style.setProperty('--color-primary-dark', this.adjustColorBrightness(hex, -15));
+        
+        const contrastHex = this.getContrastColor(hex);
+        root.style.setProperty('--color-primary-contrast', contrastHex);
+        
+        localStorage.setItem('accentColor', hex);
+    }
+
+    getContrastColor(hex) {
+        const cleanHex = hex.replace('#', '');
+        const r = parseInt(cleanHex.substring(0, 2), 16);
+        const g = parseInt(cleanHex.substring(2, 4), 16);
+        const b = parseInt(cleanHex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 150) ? '#1C1917' : '#FFFFFF';
+    }
+
+    adjustColorBrightness(hex, percent) {
+        let num = parseInt(hex.replace("#",""), 16),
+            amt = Math.round(2.55 * percent),
+            R = (num >> 16) + amt,
+            G = (num >> 8 & 0x00FF) + amt,
+            B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
     }
 }
 
