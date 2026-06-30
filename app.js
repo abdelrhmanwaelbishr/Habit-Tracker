@@ -1926,10 +1926,110 @@ class ProductivityHub {
             const video = playlist.videos.find(v => v.id === videoId);
             if (video) {
                 video.completed = !video.completed;
+                
+                // Track triggered blocks and show motivational popup
+                if (video.completed) {
+                    this.checkMotivationalStreak(playlist);
+                } else {
+                    // If unchecked, invalidate any streaks that contain the unchecked video index
+                    const idx = playlist.videos.indexOf(video);
+                    if (idx !== -1) {
+                        playlist.triggeredMotivationalBlocks = (playlist.triggeredMotivationalBlocks || [])
+                            .filter(startIdx => !(startIdx <= idx && idx < startIdx + 5));
+                    }
+                }
+
                 this.saveData('playlists', this.playlists);
                 this.renderPlaylists();
             }
         }
+    }
+
+    checkMotivationalStreak(playlist) {
+        const streakLength = 5;
+        playlist.triggeredMotivationalBlocks = playlist.triggeredMotivationalBlocks || [];
+        
+        const messages = [
+            "Unstoppable! You completed 5 videos in a row. Keep riding this wave of momentum!",
+            "Consistency is the key to mastery. Outstanding work on checking off these 5 videos!",
+            "Boom! 5 in a row! You're turning learning into a habit. Keep crushing it!",
+            "Awesome streak! 5 contiguous videos completed. Your future self is thanking you right now!",
+            "You are on fire! That's 5 videos straight. What's stopping you from doing 5 more?",
+            "Success is the sum of small efforts repeated day in and day out. Amazing job on this 5-video streak!",
+            "Five down, and you're just getting started! Keep feeding your brain.",
+            "A streak of 5! Your dedication to growth is inspiring. Let's keep this momentum going!",
+            "Progress, not perfection, but this 5-video streak is pretty close to perfect! Keep it up!",
+            "Fantastic focus! Completing 5 videos in a row takes real dedication. You've got this!",
+            "You're building momentum with every checkmark. 5 consecutive videos completed—outstanding!",
+            "Every video you watch is an investment in yourself. Excellent job completing 5 in a row!",
+            "Streak alert! 5 videos in a row checked off. Keep showing up for yourself.",
+            "Small wins lead to massive victories. Celebrating your 5-video learning streak today!",
+            "Look at you go! 5 continuous videos completed. Keep pushing the boundaries of your knowledge!",
+            "Mastery is a journey, and you just took 5 giant steps forward. Proud of your progress!",
+            "The secret of getting ahead is getting started, and you are well on your way with this 5-video streak!",
+            "Five in a row! Discipline beats motivation, but today you have both. Keep going!",
+            "You're leveling up! 5 consecutive videos completed. Keep learning, keep growing!",
+            "Amazing determination! Completing 5 videos continuously proves you have what it takes. Keep it up!"
+        ];
+
+        for (let i = 0; i <= playlist.videos.length - streakLength; i++) {
+            // Check if all videos in this window are completed
+            let allCompleted = true;
+            for (let j = 0; j < streakLength; j++) {
+                if (!playlist.videos[i + j].completed) {
+                    allCompleted = false;
+                    break;
+                }
+            }
+            
+            if (allCompleted && !playlist.triggeredMotivationalBlocks.includes(i)) {
+                // Select a random message
+                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                
+                // Mark this block as triggered
+                playlist.triggeredMotivationalBlocks.push(i);
+                
+                // Show the popup
+                this.showMotivationalPopup(randomMessage);
+                
+                // Only show one popup at a time
+                break;
+            }
+        }
+    }
+
+    showMotivationalPopup(message) {
+        // Remove existing if any
+        const existing = document.getElementById('motivationalPopup');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
+        popup.id = 'motivationalPopup';
+        popup.className = 'modal active';
+        popup.innerHTML = `
+            <div class="modal-backdrop" onclick="document.getElementById('motivationalPopup').remove()"></div>
+            <div class="modal-container">
+                <div class="modal-content motivational-content" style="text-align: center; padding: var(--spacing-xl); max-width: 450px; margin: 0 auto; position: relative; z-index: 1001; animation: modalPop 0.4s var(--transition-spring);">
+                    <div class="motivational-icon" style="font-size: 3.5rem; margin-bottom: var(--spacing-sm);">
+                        🎉
+                    </div>
+                    <h2 class="modal-title" style="margin-bottom: var(--spacing-sm); font-family: var(--font-display); color: var(--color-primary); font-size: var(--font-size-2xl);">Streak Completed!</h2>
+                    <p style="font-size: var(--font-size-base); color: var(--color-text-primary); margin-bottom: var(--spacing-lg); line-height: 1.6; font-weight: 500;">
+                        ${message}
+                    </p>
+                    <button class="btn-primary" style="margin: 0 auto; display: block;" onclick="document.getElementById('motivationalPopup').remove()">
+                        Keep Going!
+                    </button>
+                </div>
+            </div>
+            <style>
+                @keyframes modalPop {
+                    from { transform: scale(0.9); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                }
+            </style>
+        `;
+        document.body.appendChild(popup);
     }
 
     deletePlaylist(id) {
