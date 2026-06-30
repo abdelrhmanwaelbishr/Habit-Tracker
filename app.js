@@ -1764,10 +1764,10 @@ class ProductivityHub {
         const speed = playlist.speed || 1.0;
         const totalSeconds = playlist.videos.reduce((sum, v) => sum + (v.durationSeconds || 0), 0);
         const watchedSeconds = playlist.videos.filter(v => v.completed).reduce((sum, v) => sum + (v.durationSeconds || 0), 0);
-        
+
         const adjustedTotalSeconds = Math.round(totalSeconds / speed);
         const adjustedWatchedSeconds = Math.round(watchedSeconds / speed);
-        
+
         const totalTimeStr = this.formatDuration(adjustedTotalSeconds);
         const watchedTimeStr = this.formatDuration(adjustedWatchedSeconds);
 
@@ -1812,13 +1812,13 @@ class ProductivityHub {
                                     <div class="playlist-speed-dropdown" id="speed-dropdown-${playlist.id}">
                                         <div class="playlist-speed-title">Playback Speed</div>
                                         ${[1, 1.25, 1.5, 1.75, 2].map(s => {
-                                            const isActive = Math.abs(s - speed) < 0.01;
-                                            return `
+            const isActive = Math.abs(s - speed) < 0.01;
+            return `
                                                 <button class="playlist-speed-option ${isActive ? 'active' : ''}" onclick="app.setPlaylistSpeed('${playlist.id}', ${s})">
                                                     ${s}x
                                                 </button>
                                             `;
-                                        }).join('')}
+        }).join('')}
                                         <div class="playlist-speed-custom-container">
                                             <input type="text" class="playlist-speed-custom-input" placeholder="Custom (e.g. 2.5x)" value="${[1, 1.25, 1.5, 1.75, 2].some(s => Math.abs(s - speed) < 0.01) ? '' : speed + 'x'}" onkeydown="if(event.key === 'Enter') { app.setPlaylistSpeed('${playlist.id}', this.value); }">
                                             <button class="playlist-speed-custom-btn" onclick="app.setPlaylistSpeed('${playlist.id}', this.previousElementSibling.value)">Apply</button>
@@ -1884,7 +1884,7 @@ class ProductivityHub {
 
     toggleSpeedDropdown(event, playlistId) {
         event.stopPropagation();
-        
+
         // Close other dropdowns first
         document.querySelectorAll('.playlist-speed-dropdown').forEach(dropdown => {
             if (dropdown.id !== `speed-dropdown-${playlistId}`) {
