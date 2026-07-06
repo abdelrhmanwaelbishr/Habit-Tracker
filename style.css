@@ -2309,3 +2309,50 @@ body.dark-theme .date-card .task-item:hover {
 .accent-color-option.active span {
     border-color: var(--color-primary-contrast, white) !important;
 }
+
+/* Custom Toggle Switch for Motivational Quotes */
+.motivational-toggle-wrapper .switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    margin-left: var(--spacing-xs);
+}
+
+.motivational-toggle-wrapper .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.motivational-toggle-wrapper .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-border);
+    transition: var(--transition-fast);
+    border-radius: var(--radius-full);
+}
+
+.motivational-toggle-wrapper .slider:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--color-surface);
+    transition: var(--transition-fast);
+    border-radius: 50%;
+}
+
+.motivational-toggle-wrapper input:checked + .slider {
+    background-color: var(--color-primary);
+}
+
+.motivational-toggle-wrapper input:checked + .slider:before {
+    transform: translateX(16px);
+}

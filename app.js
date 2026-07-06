@@ -26,6 +26,10 @@ class ProductivityHub {
         this.currentTaskFilter = 'pending';
         this.playlists = this.loadData('playlists') || [];
         this.youtubeApiKey = 'AIzaSyDOpHgt8xrp_SlMs0rWT8YDxeQsyeB3kvc';
+        this.motivationalSettings = this.loadData('motivationalSettings') || {
+            enabled: true,
+            streakCount: 0
+        };
 
         this.init();
     }
@@ -1649,7 +1653,15 @@ class ProductivityHub {
                         <h1 class="brand-title">Playlist Tracker</h1>
                         <p class="brand-subtitle">Track your learning journey</p>
                     </div>
-                    <div class="header-actions">
+                    <div class="header-actions" style="display: flex; gap: var(--spacing-md); align-items: center;">
+                        <div class="motivational-toggle-wrapper" style="display: flex; align-items: center; gap: var(--spacing-sm); background: var(--color-surface); padding: 0.5rem 1rem; border-radius: var(--radius-full); border: 1.5px solid var(--color-border); font-size: var(--font-size-sm); font-weight: 500; transition: opacity var(--transition-fast); ${this.motivationalSettings.enabled ? '' : 'opacity: 0.7;'}">
+                            <span style="color: var(--color-text-secondary);">Quotes:</span>
+                            <span id="quoteStreakCounter" style="font-weight: 700; color: var(--color-primary);">${this.motivationalSettings.enabled ? `${this.motivationalSettings.streakCount}/5` : 'Off'}</span>
+                            <label class="switch">
+                                <input type="checkbox" id="toggleMotivationalQuotes" ${this.motivationalSettings.enabled ? 'checked' : ''} onchange="app.toggleMotivationalQuotesSetting(this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                         <button class="btn-primary" id="addPlaylistBtn">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                                 <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -2041,16 +2053,21 @@ class ProductivityHub {
             if (video) {
                 video.completed = !video.completed;
                 
-                // Track triggered blocks and show motivational popup
-                if (video.completed) {
-                    this.checkMotivationalStreak(playlist);
-                } else {
-                    // If unchecked, invalidate any streaks that contain the unchecked video index
-                    const idx = playlist.videos.indexOf(video);
-                    if (idx !== -1) {
-                        playlist.triggeredMotivationalBlocks = (playlist.triggeredMotivationalBlocks || [])
-                            .filter(startIdx => !(startIdx <= idx && idx < startIdx + 5));
+                // Track completion count for motivational popups if enabled
+                if (this.motivationalSettings.enabled) {
+                    if (video.completed) {
+                        this.motivationalSettings.streakCount = (this.motivationalSettings.streakCount || 0) + 1;
+                        if (this.motivationalSettings.streakCount >= 5) {
+                            const message = this.getRandomMotivationalMessage();
+                            this.showMotivationalPopup(message);
+                        }
+                    } else {
+                        if (this.motivationalSettings.streakCount > 0) {
+                            this.motivationalSettings.streakCount--;
+                        }
                     }
+                    this.saveData('motivationalSettings', this.motivationalSettings);
+                    this.updateMotivationalCounterUI();
                 }
 
                 this.saveData('playlists', this.playlists);
@@ -2059,10 +2076,7 @@ class ProductivityHub {
         }
     }
 
-    checkMotivationalStreak(playlist) {
-        const streakLength = 5;
-        playlist.triggeredMotivationalBlocks = playlist.triggeredMotivationalBlocks || [];
-        
+    getRandomMotivationalMessage() {
         const messages = [
             "Unstoppable! You completed 5 videos in a row. Keep riding this wave of momentum!",
             "Consistency is the key to mastery. Outstanding work on checking off these 5 videos!",
@@ -2085,31 +2099,37 @@ class ProductivityHub {
             "You're leveling up! 5 consecutive videos completed. Keep learning, keep growing!",
             "Amazing determination! Completing 5 videos continuously proves you have what it takes. Keep it up!"
         ];
+        return messages[Math.floor(Math.random() * messages.length)];
+    }
 
-        for (let i = 0; i <= playlist.videos.length - streakLength; i++) {
-            // Check if all videos in this window are completed
-            let allCompleted = true;
-            for (let j = 0; j < streakLength; j++) {
-                if (!playlist.videos[i + j].completed) {
-                    allCompleted = false;
-                    break;
-                }
-            }
-            
-            if (allCompleted && !playlist.triggeredMotivationalBlocks.includes(i)) {
-                // Select a random message
-                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-                
-                // Mark this block as triggered
-                playlist.triggeredMotivationalBlocks.push(i);
-                
-                // Show the popup
-                this.showMotivationalPopup(randomMessage);
-                
-                // Only show one popup at a time
-                break;
+    toggleMotivationalQuotesSetting(enabled) {
+        this.motivationalSettings.enabled = enabled;
+        this.saveData('motivationalSettings', this.motivationalSettings);
+        this.updateMotivationalCounterUI();
+    }
+
+    updateMotivationalCounterUI() {
+        const counterEl = document.getElementById('quoteStreakCounter');
+        const wrapperEl = document.querySelector('.motivational-toggle-wrapper');
+        if (counterEl) {
+            if (this.motivationalSettings.enabled) {
+                counterEl.textContent = `${this.motivationalSettings.streakCount}/5`;
+                if (wrapperEl) wrapperEl.style.opacity = '1';
+            } else {
+                counterEl.textContent = 'Off';
+                if (wrapperEl) wrapperEl.style.opacity = '0.7';
             }
         }
+    }
+
+    closeMotivationalPopup() {
+        const existing = document.getElementById('motivationalPopup');
+        if (existing) existing.remove();
+        
+        // Reset streak back to 0 when closed
+        this.motivationalSettings.streakCount = 0;
+        this.saveData('motivationalSettings', this.motivationalSettings);
+        this.updateMotivationalCounterUI();
     }
 
     showMotivationalPopup(message) {
@@ -2121,7 +2141,7 @@ class ProductivityHub {
         popup.id = 'motivationalPopup';
         popup.className = 'modal active';
         popup.innerHTML = `
-            <div class="modal-backdrop" onclick="document.getElementById('motivationalPopup').remove()"></div>
+            <div class="modal-backdrop" onclick="app.closeMotivationalPopup()"></div>
             <div class="modal-container">
                 <div class="modal-content motivational-content" style="text-align: center; padding: var(--spacing-xl); max-width: 450px; margin: 0 auto; position: relative; z-index: 1001; animation: modalPop 0.4s var(--transition-spring);">
                     <div class="motivational-icon" style="font-size: 3.5rem; margin-bottom: var(--spacing-sm);">
@@ -2131,7 +2151,7 @@ class ProductivityHub {
                     <p style="font-size: var(--font-size-base); color: var(--color-text-primary); margin-bottom: var(--spacing-lg); line-height: 1.6; font-weight: 500;">
                         ${message}
                     </p>
-                    <button class="btn-primary" style="margin: 0 auto; display: block;" onclick="document.getElementById('motivationalPopup').remove()">
+                    <button class="btn-primary" style="margin: 0 auto; display: block;" onclick="app.closeMotivationalPopup()">
                         Keep Going!
                     </button>
                 </div>
