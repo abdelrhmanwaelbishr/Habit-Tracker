@@ -28,8 +28,12 @@ class ProductivityHub {
         this.youtubeApiKey = 'AIzaSyDOpHgt8xrp_SlMs0rWT8YDxeQsyeB3kvc';
         this.motivationalSettings = this.loadData('motivationalSettings') || {
             enabled: true,
-            streakCount: 0
+            streakCount: 0,
+            targetCount: 5
         };
+        if (this.motivationalSettings.targetCount === undefined) {
+            this.motivationalSettings.targetCount = 5;
+        }
 
         this.init();
     }
@@ -81,7 +85,7 @@ class ProductivityHub {
 
     toggleAccentDropdown(event) {
         if (event) event.stopPropagation();
-        
+
         const dropdown = document.getElementById('accentColorDropdown');
         if (dropdown) {
             dropdown.classList.toggle('show');
@@ -115,15 +119,15 @@ class ProductivityHub {
         dropdown.innerHTML = `
             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: 700; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--color-border); text-transform: uppercase; letter-spacing: 0.5px;">Accent Theme</div>
             ${options.map(opt => {
-                const isActive = savedColor.toUpperCase() === opt.hex.toUpperCase();
-                return `
+            const isActive = savedColor.toUpperCase() === opt.hex.toUpperCase();
+            return `
                     <button class="accent-color-option ${isActive ? 'active' : ''}" onclick="app.selectAccentColor('${opt.hex}')">
                         <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${opt.hex}; border: 1px solid ${opt.hex === '#FFFFFF' ? '#78716C' : 'transparent'};"></span>
                         <span style="flex: 1; font-weight: 600;">${opt.name}</span>
                         ${isActive ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8L6 11L13 4"/></svg>' : ''}
                     </button>
                 `;
-            }).join('')}
+        }).join('')}
         `;
     }
 
@@ -137,10 +141,10 @@ class ProductivityHub {
         root.style.setProperty('--color-primary', hex);
         root.style.setProperty('--color-primary-light', this.adjustColorBrightness(hex, 15));
         root.style.setProperty('--color-primary-dark', this.adjustColorBrightness(hex, -15));
-        
+
         const contrastHex = this.getContrastColor(hex);
         root.style.setProperty('--color-primary-contrast', contrastHex);
-        
+
         localStorage.setItem('accentColor', hex);
     }
 
@@ -154,12 +158,12 @@ class ProductivityHub {
     }
 
     adjustColorBrightness(hex, percent) {
-        let num = parseInt(hex.replace("#",""), 16),
+        let num = parseInt(hex.replace("#", ""), 16),
             amt = Math.round(2.55 * percent),
             R = (num >> 16) + amt,
             G = (num >> 8 & 0x00FF) + amt,
             B = (num & 0x0000FF) + amt;
-        return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+        return "#" + (0x1000000 + (R < 255 ? R < 0 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 0 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 0 ? 0 : B : 255)).toString(16).slice(1);
     }
 
     setupEventListeners() {
@@ -1655,8 +1659,8 @@ class ProductivityHub {
                     </div>
                     <div class="header-actions" style="display: flex; gap: var(--spacing-md); align-items: center;">
                         <div class="motivational-toggle-wrapper" style="display: flex; align-items: center; gap: var(--spacing-sm); background: var(--color-surface); padding: 0.5rem 1rem; border-radius: var(--radius-full); border: 1.5px solid var(--color-border); font-size: var(--font-size-sm); font-weight: 500; transition: opacity var(--transition-fast); ${this.motivationalSettings.enabled ? '' : 'opacity: 0.7;'}">
-                            <span style="color: var(--color-text-secondary);">Quotes:</span>
-                            <span id="quoteStreakCounter" style="font-weight: 700; color: var(--color-primary);">${this.motivationalSettings.enabled ? `${this.motivationalSettings.streakCount}/5` : 'Off'}</span>
+                            <span style="color: var(--color-text-secondary);">Streak:</span>
+                            <span id="StreakCounter" style="font-weight: 700; color: var(--color-primary);">${this.motivationalSettings.enabled ? `${this.motivationalSettings.streakCount}/<input type="number" id="motivationalTargetInput" value="${this.motivationalSettings.targetCount || 5}" min="1" max="100" style="width: 32px; border: none; background: transparent; color: var(--color-primary); font-weight: 700; font-family: inherit; font-size: inherit; text-align: center; border-bottom: 1.5px dashed var(--color-primary); padding: 0; outline: none; margin: 0 2px;" onchange="app.changeMotivationalTarget(this.value)">` : 'Off'}</span>
                             <label class="switch">
                                 <input type="checkbox" id="toggleMotivationalQuotes" ${this.motivationalSettings.enabled ? 'checked' : ''} onchange="app.toggleMotivationalQuotesSetting(this.checked)">
                                 <span class="slider"></span>
@@ -2052,12 +2056,13 @@ class ProductivityHub {
             const video = playlist.videos.find(v => v.id === videoId);
             if (video) {
                 video.completed = !video.completed;
-                
+
                 // Track completion count for motivational popups if enabled
                 if (this.motivationalSettings.enabled) {
+                    const target = this.motivationalSettings.targetCount || 5;
                     if (video.completed) {
                         this.motivationalSettings.streakCount = (this.motivationalSettings.streakCount || 0) + 1;
-                        if (this.motivationalSettings.streakCount >= 5) {
+                        if (this.motivationalSettings.streakCount >= target) {
                             const message = this.getRandomMotivationalMessage();
                             this.showMotivationalPopup(message);
                         }
@@ -2077,27 +2082,28 @@ class ProductivityHub {
     }
 
     getRandomMotivationalMessage() {
+        const target = this.motivationalSettings.targetCount || 5;
         const messages = [
-            "Unstoppable! You completed 5 videos in a row. Keep riding this wave of momentum!",
-            "Consistency is the key to mastery. Outstanding work on checking off these 5 videos!",
-            "Boom! 5 in a row! You're turning learning into a habit. Keep crushing it!",
-            "Awesome streak! 5 contiguous videos completed. Your future self is thanking you right now!",
-            "You are on fire! That's 5 videos straight. What's stopping you from doing 5 more?",
-            "Success is the sum of small efforts repeated day in and day out. Amazing job on this 5-video streak!",
-            "Five down, and you're just getting started! Keep feeding your brain.",
-            "A streak of 5! Your dedication to growth is inspiring. Let's keep this momentum going!",
-            "Progress, not perfection, but this 5-video streak is pretty close to perfect! Keep it up!",
-            "Fantastic focus! Completing 5 videos in a row takes real dedication. You've got this!",
-            "You're building momentum with every checkmark. 5 consecutive videos completed—outstanding!",
-            "Every video you watch is an investment in yourself. Excellent job completing 5 in a row!",
-            "Streak alert! 5 videos in a row checked off. Keep showing up for yourself.",
-            "Small wins lead to massive victories. Celebrating your 5-video learning streak today!",
-            "Look at you go! 5 continuous videos completed. Keep pushing the boundaries of your knowledge!",
-            "Mastery is a journey, and you just took 5 giant steps forward. Proud of your progress!",
-            "The secret of getting ahead is getting started, and you are well on your way with this 5-video streak!",
-            "Five in a row! Discipline beats motivation, but today you have both. Keep going!",
-            "You're leveling up! 5 consecutive videos completed. Keep learning, keep growing!",
-            "Amazing determination! Completing 5 videos continuously proves you have what it takes. Keep it up!"
+            `Unstoppable! You completed ${target} videos in a row. Keep riding this wave of momentum!`,
+            `Consistency is the key to mastery. Outstanding work on checking off these ${target} videos!`,
+            `Boom! ${target} in a row! You're turning learning into a habit. Keep crushing it!`,
+            `Awesome streak! ${target} contiguous videos completed. Your future self is thanking you right now!`,
+            `You are on fire! That's ${target} videos straight. What's stopping you from doing ${target} more?`,
+            `Success is the sum of small efforts repeated day in and day out. Amazing job on this ${target}-video streak!`,
+            `Completed your target of ${target} videos, and you're just getting started! Keep feeding your brain.`,
+            `A streak of ${target}! Your dedication to growth is inspiring. Let's keep this momentum going!`,
+            `Progress, not perfection, but this ${target}-video streak is pretty close to perfect! Keep it up!`,
+            `Fantastic focus! Completing ${target} videos in a row takes real dedication. You've got this!`,
+            `You're building momentum with every checkmark. ${target} consecutive videos completed—outstanding!`,
+            `Every video you watch is an investment in yourself. Excellent job completing ${target} in a row!`,
+            `Streak alert! ${target} videos in a row checked off. Keep showing up for yourself.`,
+            `Small wins lead to massive victories. Celebrating your ${target}-video learning streak today!`,
+            `Look at you go! ${target} continuous videos completed. Keep pushing the boundaries of your knowledge!`,
+            `Mastery is a journey, and you just took ${target} giant steps forward. Proud of your progress!`,
+            `The secret of getting ahead is getting started, and you are well on your way with this ${target}-video streak!`,
+            `${target} in a row! Discipline beats motivation, but today you have both. Keep going!`,
+            `You're leveling up! ${target} consecutive videos completed. Keep learning, keep growing!`,
+            `Amazing determination! Completing ${target} videos continuously proves you have what it takes. Keep it up!`
         ];
         return messages[Math.floor(Math.random() * messages.length)];
     }
@@ -2108,12 +2114,30 @@ class ProductivityHub {
         this.updateMotivationalCounterUI();
     }
 
+    changeMotivationalTarget(val) {
+        const target = parseInt(val, 10);
+        if (isNaN(target) || target <= 0) {
+            this.updateMotivationalCounterUI();
+            return;
+          }
+          this.motivationalSettings.targetCount = target;
+          this.saveData('motivationalSettings', this.motivationalSettings);
+          
+          if (this.motivationalSettings.streakCount >= this.motivationalSettings.targetCount) {
+              const message = this.getRandomMotivationalMessage();
+              this.showMotivationalPopup(message);
+          } else {
+              this.updateMotivationalCounterUI();
+          }
+    }
+
     updateMotivationalCounterUI() {
-        const counterEl = document.getElementById('quoteStreakCounter');
+        const counterEl = document.getElementById('StreakCounter');
         const wrapperEl = document.querySelector('.motivational-toggle-wrapper');
         if (counterEl) {
             if (this.motivationalSettings.enabled) {
-                counterEl.textContent = `${this.motivationalSettings.streakCount}/5`;
+                const target = this.motivationalSettings.targetCount || 5;
+                counterEl.innerHTML = `${this.motivationalSettings.streakCount}/<input type="number" id="motivationalTargetInput" value="${target}" min="1" max="100" style="width: 32px; border: none; background: transparent; color: var(--color-primary); font-weight: 700; font-family: inherit; font-size: inherit; text-align: center; border-bottom: 1.5px dashed var(--color-primary); padding: 0; outline: none; margin: 0 2px;" onchange="app.changeMotivationalTarget(this.value)">`;
                 if (wrapperEl) wrapperEl.style.opacity = '1';
             } else {
                 counterEl.textContent = 'Off';
@@ -2125,7 +2149,7 @@ class ProductivityHub {
     closeMotivationalPopup() {
         const existing = document.getElementById('motivationalPopup');
         if (existing) existing.remove();
-        
+
         // Reset streak back to 0 when closed
         this.motivationalSettings.streakCount = 0;
         this.saveData('motivationalSettings', this.motivationalSettings);
