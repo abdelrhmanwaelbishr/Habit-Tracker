@@ -2134,16 +2134,16 @@ class ProductivityHub {
         if (isNaN(target) || target <= 0) {
             this.updateMotivationalCounterUI();
             return;
-          }
-          this.motivationalSettings.targetCount = target;
-          this.saveData('motivationalSettings', this.motivationalSettings);
-          
-          if (this.motivationalSettings.streakCount >= this.motivationalSettings.targetCount) {
-              const message = this.getRandomMotivationalMessage();
-              this.showMotivationalPopup(message);
-          } else {
-              this.updateMotivationalCounterUI();
-          }
+        }
+        this.motivationalSettings.targetCount = target;
+        this.saveData('motivationalSettings', this.motivationalSettings);
+
+        if (this.motivationalSettings.streakCount >= this.motivationalSettings.targetCount) {
+            const message = this.getRandomMotivationalMessage();
+            this.showMotivationalPopup(message);
+        } else {
+            this.updateMotivationalCounterUI();
+        }
     }
 
     updateMotivationalCounterUI() {
