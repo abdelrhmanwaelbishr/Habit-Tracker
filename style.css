@@ -2372,3 +2372,180 @@ body.dark-theme .date-card .task-item:hover {
 #motivationalTargetInput {
     -moz-appearance: textfield;
 }
+
+/* Playlist Group Styling */
+.playlist-groups-section {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1.5px solid var(--color-border);
+    background: var(--color-bg-light, rgba(0, 0, 0, 0.015));
+}
+
+.playlist-groups-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.playlist-groups-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.playlist-groups-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.playlist-group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.playlist-group-card {
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    transition: var(--transition-fast);
+    position: relative;
+}
+
+.playlist-group-card:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.playlist-group-name {
+    font-weight: 700;
+    font-size: var(--font-size-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 50px; /* Space for action buttons */
+}
+
+.playlist-group-range {
+    font-size: var(--font-size-xs);
+    opacity: 0.8;
+}
+
+.playlist-group-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+}
+
+.playlist-group-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+body.dark-theme .playlist-group-progress-bar {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.playlist-group-progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.playlist-group-progress-text {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+}
+
+.playlist-group-card-actions {
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    display: flex;
+    gap: 4px;
+}
+
+.playlist-group-card-actions .icon-btn {
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+}
+
+/* Group Card Color Themes */
+.playlist-group-card.group-rose { background: #FFE4E6; border-color: #FDA4AF; color: #881337; }
+.playlist-group-card.group-rose .playlist-group-progress-bar { background: rgba(136, 19, 55, 0.1); }
+.playlist-group-card.group-rose .playlist-group-progress-fill { background: #E11D48; }
+
+.playlist-group-card.group-amber { background: #FEF3C7; border-color: #FCD34D; color: #78350F; }
+.playlist-group-card.group-amber .playlist-group-progress-bar { background: rgba(120, 53, 15, 0.1); }
+.playlist-group-card.group-amber .playlist-group-progress-fill { background: #D97706; }
+
+.playlist-group-card.group-emerald { background: #D1FAE5; border-color: #6EE7B7; color: #065F46; }
+.playlist-group-card.group-emerald .playlist-group-progress-bar { background: rgba(6, 95, 70, 0.1); }
+.playlist-group-card.group-emerald .playlist-group-progress-fill { background: #059669; }
+
+.playlist-group-card.group-sky { background: #E0F2FE; border-color: #7DD3FC; color: #075985; }
+.playlist-group-card.group-sky .playlist-group-progress-bar { background: rgba(7, 89, 133, 0.1); }
+.playlist-group-card.group-sky .playlist-group-progress-fill { background: #0284C7; }
+
+.playlist-group-card.group-violet { background: #EDE9FE; border-color: #C4B5FD; color: #5B21B6; }
+.playlist-group-card.group-violet .playlist-group-progress-bar { background: rgba(91, 33, 182, 0.1); }
+.playlist-group-card.group-violet .playlist-group-progress-fill { background: #7C3AED; }
+
+.playlist-group-card.group-slate { background: #F1F5F9; border-color: #CBD5E1; color: #334155; }
+.playlist-group-card.group-slate .playlist-group-progress-bar { background: rgba(51, 65, 85, 0.1); }
+.playlist-group-card.group-slate .playlist-group-progress-fill { background: #475569; }
+
+/* Dark theme group colors */
+body.dark-theme .playlist-group-card.group-rose { background: #4C1D24; border-color: #9F1239; color: #FECDD3; }
+body.dark-theme .playlist-group-card.group-rose .playlist-group-progress-bar { background: rgba(254, 205, 211, 0.15); }
+body.dark-theme .playlist-group-card.group-rose .playlist-group-progress-fill { background: #F43F5E; }
+
+body.dark-theme .playlist-group-card.group-amber { background: #451A03; border-color: #B45309; color: #FDE68A; }
+body.dark-theme .playlist-group-card.group-amber .playlist-group-progress-bar { background: rgba(253, 230, 138, 0.15); }
+body.dark-theme .playlist-group-card.group-amber .playlist-group-progress-fill { background: #F59E0B; }
+
+body.dark-theme .playlist-group-card.group-emerald { background: #064E3B; border-color: #059669; color: #A7F3D0; }
+body.dark-theme .playlist-group-card.group-emerald .playlist-group-progress-bar { background: rgba(167, 243, 208, 0.15); }
+body.dark-theme .playlist-group-card.group-emerald .playlist-group-progress-fill { background: #10B981; }
+
+body.dark-theme .playlist-group-card.group-sky { background: #0C4A6E; border-color: #0284C7; color: #BAE6FD; }
+body.dark-theme .playlist-group-card.group-sky .playlist-group-progress-bar { background: rgba(186, 230, 253, 0.15); }
+body.dark-theme .playlist-group-card.group-sky .playlist-group-progress-fill { background: #0EA5E9; }
+
+body.dark-theme .playlist-group-card.group-violet { background: #2E1065; border-color: #7C3AED; color: #DDD6FE; }
+body.dark-theme .playlist-group-card.group-violet .playlist-group-progress-bar { background: rgba(221, 214, 254, 0.15); }
+body.dark-theme .playlist-group-card.group-violet .playlist-group-progress-fill { background: #8B5CF6; }
+
+body.dark-theme .playlist-group-card.group-slate { background: #1E293B; border-color: #475569; color: #E2E8F0; }
+body.dark-theme .playlist-group-card.group-slate .playlist-group-progress-bar { background: rgba(226, 232, 240, 0.15); }
+body.dark-theme .playlist-group-card.group-slate .playlist-group-progress-fill { background: #64748B; }
+
+/* Modal Tab Styles */
+.modal-tabs .tab-btn {
+    transition: all var(--transition-fast);
+}
+
+.modal-tabs .tab-btn.active {
+    color: var(--color-primary) !important;
+    border-bottom-color: var(--color-primary) !important;
+}
+
+.modal-tabs .tab-btn:not(.active) {
+    color: var(--color-text-tertiary) !important;
+    border-bottom: 2px solid transparent !important;
+}
+
+.modal-tabs .tab-btn:hover {
+    color: var(--color-primary-light) !important;
+}

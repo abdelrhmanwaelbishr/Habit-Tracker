@@ -1894,7 +1894,6 @@ class ProductivityHub {
         const speed = playlist.speed || 1.0;
         const totalSeconds = playlist.videos.reduce((sum, v) => sum + (v.durationSeconds || 0), 0);
         const watchedSeconds = playlist.videos.filter(v => v.completed).reduce((sum, v) => sum + (v.durationSeconds || 0), 0);
-
         const adjustedTotalSeconds = Math.round(totalSeconds / speed);
         const adjustedWatchedSeconds = Math.round(watchedSeconds / speed);
         const leftSeconds = Math.max(0, totalSeconds - watchedSeconds);
@@ -1903,6 +1902,37 @@ class ProductivityHub {
         const totalTimeStr = this.formatDuration(adjustedTotalSeconds);
         const watchedTimeStr = this.formatDuration(adjustedWatchedSeconds);
         const leftTimeStr = this.formatDuration(adjustedLeftSeconds);
+
+        // Group Progress Calculations
+        playlist.groups = playlist.groups || [];
+        const completedGroupsCount = playlist.groups.filter(g => {
+            const startIdx = g.start - 1;
+            const endIdx = g.end - 1;
+            for (let i = startIdx; i <= endIdx; i++) {
+                if (playlist.videos[i] && !playlist.videos[i].completed) {
+                    return false;
+                }
+            }
+            return true;
+        }).length;
+        const groupProgress = playlist.groups.length === 0 ? 0 : (completedGroupsCount / playlist.groups.length) * 100;
+
+        // Group specific video statistics helper
+        const getGroupProgressStats = (g) => {
+            const startIdx = g.start - 1;
+            const endIdx = g.end - 1;
+            let groupTotal = 0;
+            let groupCompleted = 0;
+            for (let i = startIdx; i <= endIdx; i++) {
+                if (playlist.videos[i]) {
+                    groupTotal++;
+                    if (playlist.videos[i].completed) {
+                        groupCompleted++;
+                    }
+                }
+            }
+            return { completed: groupCompleted, total: groupTotal };
+        };
 
         return `
             <div class="playlist-card ${expandedClass}" id="playlist-${playlist.id}">
@@ -1935,6 +1965,14 @@ class ProductivityHub {
                                 </div>
                                 <span class="playlist-progress-text">${Math.round(progress)}%</span>
                             </div>
+                            ${playlist.groups.length > 0 ? `
+                            <div class="playlist-progress group-progress" style="margin-top: 6px;">
+                                <div class="playlist-progress-bar-bg" style="background: var(--color-border-light, rgba(0,0,0,0.05));">
+                                    <div class="playlist-progress-bar-fill" style="width: ${groupProgress}%; background: var(--color-primary-light);"></div>
+                                </div>
+                                <span class="playlist-progress-text" style="font-weight: 700;">Groups: ${completedGroupsCount}/${playlist.groups.length} (${Math.round(groupProgress)}%)</span>
+                            </div>
+                            ` : ''}
                             <div class="playlist-time-info" onclick="event.stopPropagation();">
                                 <span class="playlist-time-total" title="Original Total: ${this.formatDuration(totalSeconds)}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align: -2px; margin-right: 4px;">
@@ -2004,6 +2042,68 @@ class ProductivityHub {
                 </div>
 
                 <div class="playlist-videos">
+                    <div class="playlist-groups-section">
+                        <div class="playlist-groups-header">
+                            <span class="playlist-groups-title">Learning Groups</span>
+                            <div class="playlist-groups-actions">
+                                <button class="btn-secondary" style="padding: 4px 8px; font-size: var(--font-size-xs);" onclick="event.stopPropagation(); app.openGroupModal('${playlist.id}')">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px;">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>Add Group
+                                </button>
+                                ${playlist.groups.length > 0 ? `
+                                <button class="btn-secondary" style="padding: 4px 8px; font-size: var(--font-size-xs); color: var(--color-danger, #EF4444); border-color: rgba(239, 68, 68, 0.2);" onclick="event.stopPropagation(); app.clearAllPlaylistGroups('${playlist.id}')">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px;">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>Clear All
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        ${playlist.groups.length === 0 ? `
+                        <div style="font-size: var(--font-size-xs); color: var(--color-text-tertiary); font-style: italic;">
+                            No custom video groups defined. Click "Add Group" to specify learning sections or batch ranges.
+                        </div>
+                        ` : `
+                        <div class="playlist-group-grid">
+                            ${playlist.groups.map(g => {
+                                const stats = getGroupProgressStats(g);
+                                const gProgress = stats.total === 0 ? 0 : (stats.completed / stats.total) * 100;
+                                const isCompleted = stats.completed === stats.total;
+                                return `
+                                    <div class="playlist-group-card group-${g.color || 'default'}">
+                                        <div class="playlist-group-name" title="${this.escapeHtml(g.name)}">${this.escapeHtml(g.name)}</div>
+                                        <div class="playlist-group-range">Videos ${g.start} - ${g.end}</div>
+                                        <div class="playlist-group-progress">
+                                            <div class="playlist-group-progress-bar">
+                                                <div class="playlist-group-progress-fill" style="width: ${gProgress}%;"></div>
+                                            </div>
+                                            <span class="playlist-group-progress-text">${isCompleted ? 'Completed' : `${stats.completed}/${stats.total}`}</span>
+                                        </div>
+                                        <div class="playlist-group-card-actions" onclick="event.stopPropagation();">
+                                            <button class="icon-btn" onclick="app.openGroupModal('${playlist.id}', '${g.id}')" title="Edit Group">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path>
+                                                </svg>
+                                            </button>
+                                            <button class="icon-btn delete" onclick="app.deletePlaylistGroup('${playlist.id}', '${g.id}')" title="Delete Group">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        `}
+                    </div>
+
                     <div class="video-list">
                         ${playlist.videos.map((video, idx) => `
                             <div class="video-item ${video.completed ? 'completed' : ''}">
@@ -2404,6 +2504,252 @@ pause
         if (modal) {
             modal.classList.remove('active');
             document.body.style.overflow = '';
+        }
+    }
+
+    switchGroupTab(tab) {
+        const tabSingle = document.getElementById('groupTabSingle');
+        const tabQuick = document.getElementById('groupTabQuick');
+        const contentSingle = document.getElementById('groupTabContentSingle');
+        const contentQuick = document.getElementById('groupTabContentQuick');
+
+        if (tab === 'single') {
+            if (tabSingle) tabSingle.classList.add('active');
+            if (tabQuick) tabQuick.classList.remove('active');
+            if (contentSingle) contentSingle.style.display = 'block';
+            if (contentQuick) contentQuick.style.display = 'none';
+            
+            const nameEl = document.getElementById('groupName');
+            const startEl = document.getElementById('groupStart');
+            const endEl = document.getElementById('groupEnd');
+            if (nameEl) nameEl.required = true;
+            if (startEl) startEl.required = true;
+            if (endEl) endEl.required = true;
+        } else {
+            if (tabSingle) tabSingle.classList.remove('active');
+            if (tabQuick) tabQuick.classList.add('active');
+            if (contentSingle) contentSingle.style.display = 'none';
+            if (contentQuick) contentQuick.style.display = 'block';
+            
+            const nameEl = document.getElementById('groupName');
+            const startEl = document.getElementById('groupStart');
+            const endEl = document.getElementById('groupEnd');
+            if (nameEl) nameEl.required = false;
+            if (startEl) startEl.required = false;
+            if (endEl) endEl.required = false;
+        }
+    }
+
+    openGroupModal(playlistId, groupId = '') {
+        const playlist = this.playlists.find(p => p.id === playlistId);
+        if (!playlist) return;
+
+        const maxVideos = playlist.videos.length;
+        const gPlaylistIdEl = document.getElementById('groupPlaylistId');
+        const gIdEl = document.getElementById('groupId');
+        if (gPlaylistIdEl) gPlaylistIdEl.value = playlistId;
+        if (gIdEl) gIdEl.value = groupId;
+
+        const startInput = document.getElementById('groupStart');
+        const endInput = document.getElementById('groupEnd');
+        if (startInput) startInput.max = maxVideos;
+        if (endInput) endInput.max = maxVideos;
+
+        const titleEl = document.getElementById('playlistGroupModalTitle');
+        const btnTextEl = document.getElementById('groupSubmitBtnText');
+        const tabsEl = document.querySelector('#playlistGroupModal .modal-tabs');
+
+        if (groupId) {
+            const group = playlist.groups.find(g => g.id === groupId);
+            if (!group) return;
+
+            if (titleEl) titleEl.textContent = 'Edit Group';
+            if (btnTextEl) btnTextEl.textContent = 'Save Changes';
+            
+            const nameEl = document.getElementById('groupName');
+            if (nameEl) nameEl.value = group.name;
+            if (startInput) startInput.value = group.start;
+            if (endInput) endInput.value = group.end;
+
+            const colorRadios = document.getElementsByName('groupColor');
+            colorRadios.forEach(radio => {
+                radio.checked = (radio.value === (group.color || 'default'));
+            });
+
+            if (tabsEl) tabsEl.style.display = 'none';
+            this.switchGroupTab('single');
+        } else {
+            if (titleEl) titleEl.textContent = 'Create Group';
+            if (btnTextEl) btnTextEl.textContent = 'Create Group';
+            
+            const formEl = document.getElementById('playlistGroupForm');
+            if (formEl) formEl.reset();
+            
+            if (startInput) startInput.value = 1;
+            if (endInput) endInput.value = maxVideos;
+
+            if (tabsEl) tabsEl.style.display = 'flex';
+            this.switchGroupTab('single');
+        }
+
+        this.openModal('playlistGroupModal', false); // Do not reset custom values inside openModal
+    }
+
+    parseRangeSpecification(inputString) {
+        const regex = /(\d+)[\s:-]+(\d+)/g;
+        const ranges = [];
+        let match;
+        while ((match = regex.exec(inputString)) !== null) {
+            const start = parseInt(match[1], 10);
+            const end = parseInt(match[2], 10);
+            if (start > 0 && end >= start) {
+                ranges.push({ start, end });
+            }
+        }
+        return ranges;
+    }
+
+    handleGroupSubmit(e) {
+        e.preventDefault();
+        const playlistId = document.getElementById('groupPlaylistId').value;
+        const groupId = document.getElementById('groupId').value;
+        const playlist = this.playlists.find(p => p.id === playlistId);
+        if (!playlist) return;
+
+        playlist.groups = playlist.groups || [];
+
+        const quickTab = document.getElementById('groupTabQuick');
+        const isQuickTab = quickTab && quickTab.classList.contains('active');
+
+        if (isQuickTab) {
+            const rangesInput = document.getElementById('groupRangesInput').value.trim();
+            const ranges = this.parseRangeSpecification(rangesInput);
+            if (ranges.length === 0) {
+                alert('No valid ranges found. Please specify ranges like 1-10, 11-20.');
+                return;
+            }
+
+            const maxVideos = playlist.videos.length;
+            const parsedRanges = ranges.map(r => ({
+                start: Math.min(maxVideos, Math.max(1, r.start)),
+                end: Math.min(maxVideos, Math.max(1, r.end))
+            }));
+
+            // Check quick range internal overlaps
+            for (let i = 0; i < parsedRanges.length; i++) {
+                const r1 = parsedRanges[i];
+                if (r1.start > r1.end) {
+                    alert('Invalid range: Start video number cannot be greater than End video number.');
+                    return;
+                }
+                for (let j = i + 1; j < parsedRanges.length; j++) {
+                    const r2 = parsedRanges[j];
+                    if (r1.start <= r2.end && r1.end >= r2.start) {
+                        alert(`Conflict: Specified quick split ranges overlap with each other: (Videos ${r1.start}-${r1.end}) and (Videos ${r2.start}-${r2.end}).`);
+                        return;
+                    }
+                }
+            }
+
+            // Check overlaps with pre-existing groups
+            for (const r of parsedRanges) {
+                const overlappingGroup = playlist.groups.find(g => {
+                    return (r.start <= g.end && r.end >= g.start);
+                });
+                if (overlappingGroup) {
+                    alert(`Conflict: The range (Videos ${r.start} - ${r.end}) overlaps with an existing group: "${overlappingGroup.name}" (Videos ${overlappingGroup.start} - ${overlappingGroup.end}). Each video can only belong to one group.`);
+                    return;
+                }
+            }
+
+            // Add all valid ranges
+            parsedRanges.forEach((r, idx) => {
+                const colors = ['rose', 'amber', 'emerald', 'sky', 'violet', 'slate'];
+                const color = colors[idx % colors.length];
+
+                playlist.groups.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                    name: `Group ${playlist.groups.length + 1} (${r.start}-${r.end})`,
+                    start: r.start,
+                    end: r.end,
+                    color: color
+                });
+            });
+        } else {
+            const name = document.getElementById('groupName').value.trim();
+            const start = parseInt(document.getElementById('groupStart').value, 10);
+            const end = parseInt(document.getElementById('groupEnd').value, 10);
+            
+            const colorRadios = document.getElementsByName('groupColor');
+            let color = 'default';
+            for (const radio of colorRadios) {
+                if (radio.checked) {
+                    color = radio.value;
+                    break;
+                }
+            }
+
+            const maxVideos = playlist.videos.length;
+            const clampedStart = Math.min(maxVideos, Math.max(1, start));
+            const clampedEnd = Math.min(maxVideos, Math.max(1, end));
+
+            if (clampedStart > clampedEnd) {
+                alert('Start video cannot be greater than end video.');
+                return;
+            }
+
+            // Check overlaps with other groups
+            const overlappingGroup = playlist.groups.find(g => {
+                if (groupId && g.id === groupId) return false;
+                return (clampedStart <= g.end && clampedEnd >= g.start);
+            });
+
+            if (overlappingGroup) {
+                alert(`Conflict: The range (Videos ${clampedStart} - ${clampedEnd}) overlaps with an existing group: "${overlappingGroup.name}" (Videos ${overlappingGroup.start} - ${overlappingGroup.end}). Each video can only belong to one group.`);
+                return;
+            }
+
+            if (groupId) {
+                const group = playlist.groups.find(g => g.id === groupId);
+                if (group) {
+                    group.name = name;
+                    group.start = clampedStart;
+                    group.end = clampedEnd;
+                    group.color = color;
+                }
+            } else {
+                playlist.groups.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                    name: name,
+                    start: clampedStart,
+                    end: clampedEnd,
+                    color: color
+                });
+            }
+        }
+
+        this.saveData('playlists', this.playlists);
+        this.renderPlaylists();
+        this.closeModal('playlistGroupModal');
+    }
+
+    deletePlaylistGroup(playlistId, groupId) {
+        const playlist = this.playlists.find(p => p.id === playlistId);
+        if (playlist) {
+            playlist.groups = (playlist.groups || []).filter(g => g.id !== groupId);
+            this.saveData('playlists', this.playlists);
+            this.renderPlaylists();
+        }
+    }
+
+    clearAllPlaylistGroups(playlistId) {
+        if (confirm('Are you sure you want to delete all groups for this playlist? This action cannot be undone.')) {
+            const playlist = this.playlists.find(p => p.id === playlistId);
+            if (playlist) {
+                playlist.groups = [];
+                this.saveData('playlists', this.playlists);
+                this.renderPlaylists();
+            }
         }
     }
 
