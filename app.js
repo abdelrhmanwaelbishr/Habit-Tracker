@@ -2073,6 +2073,32 @@ class ProductivityHub {
             const stats = getGroupProgressStats(g);
             const gProgress = stats.total === 0 ? 0 : (stats.completed / stats.total) * 100;
             const isCompleted = stats.completed === stats.total;
+
+            let groupCellsHTML = '';
+            const rangeStart = Math.min(g.start, g.end);
+            const rangeEnd = Math.max(g.start, g.end);
+            for (let vNum = rangeStart; vNum <= rangeEnd; vNum++) {
+                const videoIdx = vNum - 1;
+                const video = playlist.videos[videoIdx];
+                if (video) {
+                    const isDone = video.completed;
+                    groupCellsHTML += `
+                                                <div 
+                                                    class="group-video-cell ${isDone ? 'completed' : ''}" 
+                                                    onclick="event.stopPropagation(); app.toggleVideo('${playlist.id}', '${video.id}')"
+                                                    title="Video ${vNum}: ${this.escapeHtml(video.title)}"
+                                                >
+                                                    ${vNum}
+                                                </div>
+                    `;
+                }
+            }
+            const cellsContainerHTML = groupCellsHTML ? `
+                                        <div class="playlist-group-cells" onclick="event.stopPropagation();">
+                                            ${groupCellsHTML}
+                                        </div>
+            ` : '';
+
             return `
                                     <div class="playlist-group-card group-${g.color || 'default'}">
                                         <div class="playlist-group-name" title="${this.escapeHtml(g.name)}">${this.escapeHtml(g.name)}</div>
@@ -2083,6 +2109,7 @@ class ProductivityHub {
                                             </div>
                                             <span class="playlist-group-progress-text">${isCompleted ? 'Completed' : `${stats.completed}/${stats.total}`}</span>
                                         </div>
+                                        ${cellsContainerHTML}
                                         <div class="playlist-group-card-actions" onclick="event.stopPropagation();">
                                             <button class="icon-btn" onclick="app.openGroupModal('${playlist.id}', '${g.id}')" title="Edit Group">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
