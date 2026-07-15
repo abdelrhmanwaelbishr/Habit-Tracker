@@ -43,6 +43,11 @@ class ProductivityHub {
         this.setupEventListeners();
         this.renderPage(this.currentPage);
         this.checkPomodoroStats();
+
+        // Handle pre-initialized auth state if any
+        if (window.currentUser !== undefined) {
+            this.onUserStatusChanged(window.currentUser);
+        }
     }
 
     // ============================================
@@ -176,6 +181,38 @@ class ProductivityHub {
             accentColorBtn.addEventListener('click', (e) => this.toggleAccentDropdown(e));
         }
 
+        // Login Button
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => this.switchPage('auth'));
+        }
+
+        // User Profile Toggle
+        const userProfileBtn = document.getElementById('userProfileBtn');
+        if (userProfileBtn) {
+            userProfileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const dropdown = document.getElementById('userMenuDropdown');
+                if (dropdown) dropdown.classList.toggle('show');
+            });
+        }
+
+        // Logout Button
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                if (window.firebaseAuth && window.auth) {
+                    window.firebaseAuth.signOut(window.auth)
+                        .then(() => {
+                            this.switchPage('habits');
+                        })
+                        .catch(err => {
+                            console.error("Logout error:", err);
+                        });
+                }
+            });
+        }
+
         // Navigation
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -226,6 +263,11 @@ class ProductivityHub {
                 const dropdown = document.getElementById('accentColorDropdown');
                 if (dropdown) dropdown.classList.remove('show');
             }
+            // Close user profile dropdown on outside click
+            if (!e.target.closest('#userMenuWrapper')) {
+                const dropdown = document.getElementById('userMenuDropdown');
+                if (dropdown) dropdown.classList.remove('show');
+            }
         });
     }
 
@@ -270,6 +312,10 @@ class ProductivityHub {
                 this.setupPlaylistEventListeners();
                 this.renderPlaylists();
                 this.backfillMissingDurations();
+                break;
+            case 'auth':
+                content.innerHTML = this.getAuthPageHTML();
+                this.setupAuthEventListeners();
                 break;
         }
     }
@@ -2833,6 +2879,175 @@ pause
             return `${minutes}m ${seconds}s`;
         }
         return `${seconds}s`;
+    }
+
+    // ============================================
+    // AUTHENTICATION AND REGISTRATION
+    // ============================================
+
+    onUserStatusChanged(user) {
+        this.currentUser = user;
+        const loginBtn = document.getElementById('loginBtn');
+        const userMenuWrapper = document.getElementById('userMenuWrapper');
+        const userEmailText = document.getElementById('userEmailText');
+        const dropdownUserEmail = document.getElementById('dropdownUserEmail');
+
+        if (user) {
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (userMenuWrapper) {
+                userMenuWrapper.style.display = 'flex';
+                if (userEmailText) {
+                    const displayName = user.email.split('@')[0];
+                    userEmailText.textContent = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                }
+                if (dropdownUserEmail) dropdownUserEmail.textContent = `Logged in as ${user.email}`;
+            }
+            if (this.currentPage === 'auth') {
+                this.switchPage('habits');
+            }
+        } else {
+            if (loginBtn) loginBtn.style.display = 'flex';
+            if (userMenuWrapper) {
+                userMenuWrapper.style.display = 'none';
+            }
+        }
+    }
+
+    getAuthPageHTML() {
+        return `
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h2 class="auth-title" id="authTitle">Sign In</h2>
+                    <p class="auth-subtitle" id="authSubtitle">Access your productivity hub</p>
+                </div>
+                
+                <div id="authMessage" class="auth-message"></div>
+
+                <form id="authForm" class="modal-form" style="padding: 0;">
+                    <div class="form-group">
+                        <label for="emailInput" class="form-label">Email Address</label>
+                        <input type="email" id="emailInput" class="form-input" placeholder="name@example.com" required autocomplete="email">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="passwordInput" class="form-label">Password</label>
+                        <input type="password" id="passwordInput" class="form-input" placeholder="••••••••" required autocomplete="current-password" minlength="6">
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitAuthBtn" style="width: 100%; justify-content: center; margin-top: var(--spacing-md); height: 48px;">
+                        <span id="authSubmitText">Sign In</span>
+                    </button>
+                </form>
+
+                <div class="auth-form-footer">
+                    <span id="authToggleText">Don't have an account? </span>
+                    <a class="auth-toggle-link" id="toggleAuthMode">Sign Up</a>
+                </div>
+            </div>
+        `;
+    }
+
+    setupAuthEventListeners() {
+        const authForm = document.getElementById('authForm');
+        const toggleAuthMode = document.getElementById('toggleAuthMode');
+        
+        this.authMode = 'signin';
+
+        if (toggleAuthMode) {
+            toggleAuthMode.addEventListener('click', (e) => {
+                e.preventDefault();
+                const authTitle = document.getElementById('authTitle');
+                const authSubtitle = document.getElementById('authSubtitle');
+                const authSubmitText = document.getElementById('authSubmitText');
+                const authToggleText = document.getElementById('authToggleText');
+                const authMessage = document.getElementById('authMessage');
+
+                if (authMessage) {
+                    authMessage.className = 'auth-message';
+                    authMessage.style.display = 'none';
+                }
+
+                if (this.authMode === 'signin') {
+                    this.authMode = 'signup';
+                    authTitle.textContent = 'Create Account';
+                    authSubtitle.textContent = 'Start tracking your goals today';
+                    authSubmitText.textContent = 'Create Account';
+                    authToggleText.textContent = 'Already have an account? ';
+                    toggleAuthMode.textContent = 'Sign In';
+                } else {
+                    this.authMode = 'signin';
+                    authTitle.textContent = 'Sign In';
+                    authSubtitle.textContent = 'Access your productivity hub';
+                    authSubmitText.textContent = 'Sign In';
+                    authToggleText.textContent = "Don't have an account? ";
+                    toggleAuthMode.textContent = 'Sign Up';
+                }
+            });
+        }
+
+        if (authForm) {
+            authForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('emailInput').value.trim();
+                const password = document.getElementById('passwordInput').value;
+                const authMessage = document.getElementById('authMessage');
+                const submitAuthBtn = document.getElementById('submitAuthBtn');
+                const authSubmitText = document.getElementById('authSubmitText');
+
+                if (!email || !password) return;
+
+                if (submitAuthBtn) submitAuthBtn.disabled = true;
+                const originalBtnText = authSubmitText.textContent;
+                authSubmitText.textContent = this.authMode === 'signin' ? 'Signing In...' : 'Creating Account...';
+
+                if (authMessage) {
+                    authMessage.className = 'auth-message';
+                    authMessage.style.display = 'none';
+                }
+
+                const handleSuccess = (userCredential) => {
+                    if (authMessage) {
+                        authMessage.textContent = this.authMode === 'signin' ? 'Signed in successfully!' : 'Account created successfully!';
+                        authMessage.className = 'auth-message success';
+                    }
+                    setTimeout(() => {
+                        this.switchPage('habits');
+                    }, 1000);
+                };
+
+                const handleError = (error) => {
+                    console.error("Auth error:", error);
+                    if (submitAuthBtn) submitAuthBtn.disabled = false;
+                    authSubmitText.textContent = originalBtnText;
+
+                    let userFriendlyMsg = error.message;
+                    if (error.code === 'auth/email-already-in-use') {
+                        userFriendlyMsg = 'This email address is already in use.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        userFriendlyMsg = 'Please enter a valid email address.';
+                    } else if (error.code === 'auth/weak-password') {
+                        userFriendlyMsg = 'The password must be at least 6 characters long.';
+                    } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                        userFriendlyMsg = 'Invalid email or password. Please try again.';
+                    }
+
+                    if (authMessage) {
+                        authMessage.textContent = userFriendlyMsg;
+                        authMessage.className = 'auth-message error';
+                    }
+                };
+
+                if (this.authMode === 'signin') {
+                    window.firebaseAuth.signInWithEmailAndPassword(window.auth, email, password)
+                        .then(handleSuccess)
+                        .catch(handleError);
+                } else {
+                    window.firebaseAuth.createUserWithEmailAndPassword(window.auth, email, password)
+                        .then(handleSuccess)
+                        .catch(handleError);
+                }
+            });
+        }
     }
 }
 

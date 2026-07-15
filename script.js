@@ -1,3 +1,93 @@
+// استدعاء دوال تسجيل الدخول من فايربيز
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+// متغيرات الواجهة (اتأكد إن الـ IDs دي مطابقة للي في الـ HTML عندك)
+const emailInput = document.getElementById('emailInput');
+const passwordInput = document.getElementById('passwordInput');
+const submitAuthBtn = document.getElementById('submitAuthBtn'); // الزرار الرئيسي (Sign In / Create Account)
+const toggleAuthMode = document.getElementById('toggleAuthMode'); // زرار التبديل اللي تحت
+const authTitle = document.querySelector('.auth-title'); // لو عندك عنوان فوق (Sign In / Create Account)
+
+let isLoginMode = true; // إحنا بنبدأ بصفحة تسجيل الدخول
+
+// 1. التبديل بين صفحة (تسجيل الدخول) و (إنشاء حساب)
+if (toggleAuthMode) {
+    toggleAuthMode.addEventListener('click', (e) => {
+        e.preventDefault();
+        isLoginMode = !isLoginMode;
+
+        if (isLoginMode) {
+            // شكل صفحة الدخول
+            if (authTitle) authTitle.textContent = 'Sign In';
+            submitAuthBtn.textContent = 'Sign In';
+            toggleAuthMode.innerHTML = "Don't have an account? <b>Sign Up</b>";
+        } else {
+            // شكل صفحة إنشاء حساب
+            if (authTitle) authTitle.textContent = 'Create Account';
+            submitAuthBtn.textContent = 'Create Account';
+            toggleAuthMode.innerHTML = "Already have an account? <b>Sign In</b>";
+        }
+    });
+}
+
+// 2. تنفيذ الدخول أو التسجيل لما يدوس على الزرار
+if (submitAuthBtn) {
+    submitAuthBtn.addEventListener('click', (e) => {
+        e.preventDefault(); // عشان نمنع الفورم إنها تعمل ريفريش للصفحة
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+        const auth = window.auth; // الـ auth اللي عرفناه في index.html
+
+        if (!email || !password) {
+            alert("Please enter both email and password.");
+            return;
+        }
+
+        if (isLoginMode) {
+            // كود تسجيل الدخول
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    console.log("Logged in successfully:", userCredential.user.email);
+                    // هنا ممكن تخفي الفورم وتظهر محتوى الموقع
+                })
+                .catch((error) => {
+                    console.error("Login Error:", error.message);
+                    alert("Error logging in. Please check your credentials.");
+                });
+        } else {
+            // كود إنشاء حساب جديد
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    console.log("Account created successfully:", userCredential.user.email);
+                    // هنا ممكن تخفي الفورم وتظهر محتوى الموقع
+                })
+                .catch((error) => {
+                    console.error("Signup Error:", error.message);
+                    alert(error.message); // هيطلع رسالة لو الباسورد ضعيف أو الإيميل مستخدم
+                });
+        }
+    });
+}
+
+// 3. مراقبة حالة المستخدم (عشان لما يعمل ريفريش يفضل مسجل دخول)
+onAuthStateChanged(window.auth, (user) => {
+    if (user) {
+        // المستخدم مسجل دخول دلوقتي
+        console.log("User is currently logged in:", user.email);
+        // تقدر تخفي شاشة تسجيل الدخول وتظهر زرار "تسجيل الخروج" في الـ Navbar
+
+    } else {
+        // مفيش حد مسجل دخول
+        console.log("No user logged in.");
+        // تقدر تظهر شاشة تسجيل الدخول
+    }
+});
+
 // State Management
 let habits = JSON.parse(localStorage.getItem('habits')) || [];
 let currentView = localStorage.getItem('habitView') || 'grid';
