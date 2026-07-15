@@ -2836,6 +2836,13 @@ pause
 
     saveData(key, data) {
         localStorage.setItem(key, JSON.stringify(data));
+
+        if (this.currentUser && window.db && window.firestoreUtils) {
+            const { doc, setDoc } = window.firestoreUtils;
+            const userRef = doc(window.db, "users", this.currentUser.uid);
+            setDoc(userRef, { [key]: data }, { merge: true })
+                .catch(err => console.error("Error saving to cloud:", err));
+        }
     }
 
     loadData(key) {
@@ -2885,7 +2892,7 @@ pause
     // AUTHENTICATION AND REGISTRATION
     // ============================================
 
-    onUserStatusChanged(user) {
+    async onUserStatusChanged(user) {
         this.currentUser = user;
         const loginBtn = document.getElementById('loginBtn');
         const userMenuWrapper = document.getElementById('userMenuWrapper');
@@ -2905,6 +2912,32 @@ pause
             if (this.currentPage === 'auth') {
                 this.switchPage('habits');
             }
+
+            // === جلب البيانات من السيرفر ===
+            if (window.db && window.firestoreUtils) {
+                const { doc, getDoc } = window.firestoreUtils;
+                try {
+                    const userRef = doc(window.db, "users", user.uid);
+                    const docSnap = await getDoc(userRef);
+
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        // تحديث البيانات المحلية ببيانات السيرفر
+                        if (data.habits) this.habits = data.habits;
+                        if (data.tasks) this.tasks = data.tasks;
+                        if (data.pomodoroSettings) this.pomodoroSettings = data.pomodoroSettings;
+                        if (data.pomodoroStats) this.pomodoroStats = data.pomodoroStats;
+                        if (data.playlists) this.playlists = data.playlists;
+                        if (data.motivationalSettings) this.motivationalSettings = data.motivationalSettings;
+
+                        // إعادة تحميل الصفحة عشان تظهر البيانات الجديدة
+                        this.renderPage(this.currentPage);
+                    }
+                } catch (err) {
+                    console.error("Error loading from cloud:", err);
+                }
+            }
+
         } else {
             if (loginBtn) loginBtn.style.display = 'flex';
             if (userMenuWrapper) {
@@ -2950,7 +2983,7 @@ pause
     setupAuthEventListeners() {
         const authForm = document.getElementById('authForm');
         const toggleAuthMode = document.getElementById('toggleAuthMode');
-        
+
         this.authMode = 'signin';
 
         if (toggleAuthMode) {
@@ -3034,6 +3067,7 @@ pause
                     if (authMessage) {
                         authMessage.textContent = userFriendlyMsg;
                         authMessage.className = 'auth-message error';
+                        authMessage.style.display = 'block';
                     }
                 };
 
