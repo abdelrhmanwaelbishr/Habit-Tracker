@@ -481,7 +481,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // ضفنا هنا updateProfile
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -494,23 +495,23 @@
             measurementId: "G-6EL974P299"
         };
 
-
         const app = initializeApp(firebaseConfig);
 
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Expose Firebase variables to global window object
         window.auth = auth;
         window.db = db;
         window.firestoreUtils = { doc, setDoc, getDoc };
+
+        // ضفنا updateProfile للـ window
         window.firebaseAuth = {
             createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
-            signOut
+            signOut,
+            updateProfile
         };
 
-        // Listen for auth state changes
         onAuthStateChanged(auth, (user) => {
             if (window.app && typeof window.app.onUserStatusChanged === 'function') {
                 window.app.onUserStatusChanged(user);
@@ -520,8 +521,6 @@
         });
 
         console.log("Firebase is ready to go, Abdelrahman!");
-
-
     </script>
     <script src="app.js"></script>
 </body>

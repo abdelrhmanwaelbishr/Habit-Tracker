@@ -2903,11 +2903,14 @@ pause
             if (loginBtn) loginBtn.style.display = 'none';
             if (userMenuWrapper) {
                 userMenuWrapper.style.display = 'flex';
+                // لو ليه يوزرنيم اعرضه، لو مفيش اعرض الجزء الأول من الإيميل كبديل
                 if (userEmailText) {
-                    const displayName = user.email.split('@')[0];
+                    const displayName = user.displayName || user.email.split('@')[0];
                     userEmailText.textContent = displayName.charAt(0).toUpperCase() + displayName.slice(1);
                 }
-                if (dropdownUserEmail) dropdownUserEmail.textContent = `Logged in as ${user.email}`;
+                if (dropdownUserEmail) {
+                    dropdownUserEmail.textContent = user.displayName ? `Logged in as ${user.displayName}` : `Logged in as ${user.email}`;
+                }
             }
             if (this.currentPage === 'auth') {
                 this.switchPage('habits');
@@ -2922,7 +2925,6 @@ pause
 
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        // تحديث البيانات المحلية ببيانات السيرفر
                         if (data.habits) this.habits = data.habits;
                         if (data.tasks) this.tasks = data.tasks;
                         if (data.pomodoroSettings) this.pomodoroSettings = data.pomodoroSettings;
@@ -2930,7 +2932,6 @@ pause
                         if (data.playlists) this.playlists = data.playlists;
                         if (data.motivationalSettings) this.motivationalSettings = data.motivationalSettings;
 
-                        // إعادة تحميل الصفحة عشان تظهر البيانات الجديدة
                         this.renderPage(this.currentPage);
                     }
                 } catch (err) {
@@ -2957,6 +2958,12 @@ pause
                 <div id="authMessage" class="auth-message"></div>
 
                 <form id="authForm" class="modal-form" style="padding: 0;">
+                    <!-- حقل اليوزرنيم (مخفي في البداية عشان إحنا في صفحة الدخول) -->
+                    <div class="form-group" id="usernameGroup" style="display: none;">
+                        <label for="usernameInput" class="form-label">Username</label>
+                        <input type="text" id="usernameInput" class="form-input" placeholder="e.g., Abdelrahman" autocomplete="username">
+                    </div>
+
                     <div class="form-group">
                         <label for="emailInput" class="form-label">Email Address</label>
                         <input type="email" id="emailInput" class="form-input" placeholder="name@example.com" required autocomplete="email">
@@ -2995,6 +3002,10 @@ pause
                 const authToggleText = document.getElementById('authToggleText');
                 const authMessage = document.getElementById('authMessage');
 
+                // عناصر اليوزرنيم
+                const usernameGroup = document.getElementById('usernameGroup');
+                const usernameInput = document.getElementById('usernameInput');
+
                 if (authMessage) {
                     authMessage.className = 'auth-message';
                     authMessage.style.display = 'none';
@@ -3007,6 +3018,11 @@ pause
                     authSubmitText.textContent = 'Create Account';
                     authToggleText.textContent = 'Already have an account? ';
                     toggleAuthMode.textContent = 'Sign In';
+                    // إظهار حقل اليوزرنيم وجعله إجباري
+                    if (usernameGroup) {
+                        usernameGroup.style.display = 'block';
+                        usernameInput.required = true;
+                    }
                 } else {
                     this.authMode = 'signin';
                     authTitle.textContent = 'Sign In';
@@ -3014,6 +3030,11 @@ pause
                     authSubmitText.textContent = 'Sign In';
                     authToggleText.textContent = "Don't have an account? ";
                     toggleAuthMode.textContent = 'Sign Up';
+                    // إخفاء حقل اليوزرنيم
+                    if (usernameGroup) {
+                        usernameGroup.style.display = 'none';
+                        usernameInput.required = false;
+                    }
                 }
             });
         }
@@ -3023,6 +3044,8 @@ pause
                 e.preventDefault();
                 const email = document.getElementById('emailInput').value.trim();
                 const password = document.getElementById('passwordInput').value;
+                const username = document.getElementById('usernameInput')?.value.trim();
+
                 const authMessage = document.getElementById('authMessage');
                 const submitAuthBtn = document.getElementById('submitAuthBtn');
                 const authSubmitText = document.getElementById('authSubmitText');
@@ -3042,6 +3065,7 @@ pause
                     if (authMessage) {
                         authMessage.textContent = this.authMode === 'signin' ? 'Signed in successfully!' : 'Account created successfully!';
                         authMessage.className = 'auth-message success';
+                        authMessage.style.display = 'block';
                     }
                     setTimeout(() => {
                         this.switchPage('habits');
@@ -3076,7 +3100,21 @@ pause
                         .then(handleSuccess)
                         .catch(handleError);
                 } else {
+                    // كود إنشاء الحساب مع ربط اليوزرنيم
                     window.firebaseAuth.createUserWithEmailAndPassword(window.auth, email, password)
+                        .then((userCredential) => {
+                            const user = userCredential.user;
+                            // لو كتب يوزرنيم هنحدث بروفايل فايربيز بيه
+                            if (username && window.firebaseAuth.updateProfile) {
+                                return window.firebaseAuth.updateProfile(user, { displayName: username })
+                                    .then(() => {
+                                        // تحديث الواجهة فوراً بالاسم الجديد
+                                        this.onUserStatusChanged(user);
+                                        return userCredential;
+                                    });
+                            }
+                            return userCredential;
+                        })
                         .then(handleSuccess)
                         .catch(handleError);
                 }
