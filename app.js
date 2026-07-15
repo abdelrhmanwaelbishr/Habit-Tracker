@@ -60,7 +60,11 @@ class ProductivityHub {
             document.body.classList.add('dark-theme');
         }
 
-        const accentColor = localStorage.getItem('accentColor');
+        let accentColor = localStorage.getItem('accentColor');
+        if (accentColor === '#10B981') {
+            accentColor = '#FF6B35';
+            localStorage.setItem('accentColor', '#FF6B35');
+        }
         if (accentColor) {
             const isDark = theme === 'dark';
             if (isDark && accentColor === '#1C1917') {
@@ -213,6 +217,16 @@ class ProductivityHub {
             });
         }
 
+        // Edit Profile Button
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        if (editProfileBtn) {
+            editProfileBtn.addEventListener('click', () => {
+                const dropdown = document.getElementById('userMenuDropdown');
+                if (dropdown) dropdown.classList.remove('show');
+                this.switchPage('settings');
+            });
+        }
+
         // Navigation
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -316,6 +330,10 @@ class ProductivityHub {
             case 'auth':
                 content.innerHTML = this.getAuthPageHTML();
                 this.setupAuthEventListeners();
+                break;
+            case 'settings':
+                content.innerHTML = this.getSettingsPageHTML();
+                this.setupSettingsEventListeners();
                 break;
         }
     }
@@ -2862,6 +2880,49 @@ pause
         return div.innerHTML;
     }
 
+    updateNavbarAvatar(photoURL, displayName, email) {
+        const avatarImg = document.getElementById('userAvatarImg');
+        const avatarFallback = document.getElementById('userAvatarFallback');
+
+        if (photoURL && avatarImg) {
+            avatarImg.src = photoURL;
+            avatarImg.style.display = 'block';
+            if (avatarFallback) avatarFallback.style.display = 'none';
+        } else {
+            if (avatarImg) avatarImg.style.display = 'none';
+            if (avatarFallback) {
+                avatarFallback.style.display = 'flex';
+                const initial = (displayName || email || 'U').charAt(0).toUpperCase();
+                avatarFallback.textContent = initial;
+            }
+        }
+    }
+
+    resizeImageToBase64(file, maxSize = 200) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                    else { w = Math.round(w * maxSize / h); h = maxSize; }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => reject(new Error('Failed to load image.'));
+                img.src = e.target.result;
+            };
+            reader.onerror = () => reject(new Error('Failed to read file.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
     // Parse ISO 8601 duration (e.g. PT1H23M45S) into total seconds
     parseISO8601Duration(iso) {
         const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -2896,18 +2957,16 @@ pause
         this.currentUser = user;
         const loginBtn = document.getElementById('loginBtn');
         const userMenuWrapper = document.getElementById('userMenuWrapper');
-        const userEmailText = document.getElementById('userEmailText');
         const dropdownUserEmail = document.getElementById('dropdownUserEmail');
 
         if (user) {
             if (loginBtn) loginBtn.style.display = 'none';
             if (userMenuWrapper) {
                 userMenuWrapper.style.display = 'flex';
-                // لو ليه يوزرنيم اعرضه، لو مفيش اعرض الجزء الأول من الإيميل كبديل
-                if (userEmailText) {
-                    const displayName = user.displayName || user.email.split('@')[0];
-                    userEmailText.textContent = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-                }
+
+                // Update avatar — initial render (may be overridden by Firestore data below)
+                this.updateNavbarAvatar(user.photoURL, user.displayName, user.email);
+
                 if (dropdownUserEmail) {
                     dropdownUserEmail.textContent = user.displayName ? `Logged in as ${user.displayName}` : `Logged in as ${user.email}`;
                 }
@@ -2916,9 +2975,23 @@ pause
                 this.switchPage('habits');
             }
 
-            // === جلب البيانات من السيرفر ===
+            // === جلب البيانات من السيرفر وعمل self-healing لمطابقة اسم المستخدم ===
             if (window.db && window.firestoreUtils) {
-                const { doc, getDoc } = window.firestoreUtils;
+                const { doc, getDoc, setDoc } = window.firestoreUtils;
+
+                // 1. Self-healing for username mapping (registers existing username -> email maps in Firestore)
+                if (user.displayName) {
+                    const usernameRef = doc(window.db, "usernames", user.displayName.toLowerCase());
+                    getDoc(usernameRef).then((snap) => {
+                        if (!snap.exists()) {
+                            setDoc(usernameRef, { email: user.email, uid: user.uid })
+                                .then(() => console.log("Self-healed username mapping for:", user.displayName))
+                                .catch(e => console.error("Self-heal error:", e));
+                        }
+                    }).catch(e => console.error("Self-heal check error:", e));
+                }
+
+                // 2. Fetch habits, tasks, and profile pic
                 try {
                     const userRef = doc(window.db, "users", user.uid);
                     const docSnap = await getDoc(userRef);
@@ -2931,6 +3004,12 @@ pause
                         if (data.pomodoroStats) this.pomodoroStats = data.pomodoroStats;
                         if (data.playlists) this.playlists = data.playlists;
                         if (data.motivationalSettings) this.motivationalSettings = data.motivationalSettings;
+
+                        // Load profile pic from Firestore (handles base64 images too long for Auth)
+                        this._cachedProfilePic = data.profilePicUrl || null;
+                        if (data.profilePicUrl) {
+                            this.updateNavbarAvatar(data.profilePicUrl, user.displayName, user.email);
+                        }
 
                         this.renderPage(this.currentPage);
                     }
@@ -2961,12 +3040,12 @@ pause
                     <!-- حقل اليوزرنيم (مخفي في البداية عشان إحنا في صفحة الدخول) -->
                     <div class="form-group" id="usernameGroup" style="display: none;">
                         <label for="usernameInput" class="form-label">Username</label>
-                        <input type="text" id="usernameInput" class="form-input" placeholder="e.g., Abdelrahman" autocomplete="username">
+                        <input type="text" id="usernameInput" class="form-input" placeholder="Enter Username" autocomplete="username">
                     </div>
 
                     <div class="form-group">
-                        <label for="emailInput" class="form-label">Email Address</label>
-                        <input type="email" id="emailInput" class="form-input" placeholder="name@example.com" required autocomplete="email">
+                        <label for="emailInput" class="form-label" id="emailLabel">Email or Username</label>
+                        <input type="text" id="emailInput" class="form-input" placeholder="Email/Username" required autocomplete="username email">
                     </div>
                     
                     <div class="form-group">
@@ -3001,6 +3080,8 @@ pause
                 const authSubmitText = document.getElementById('authSubmitText');
                 const authToggleText = document.getElementById('authToggleText');
                 const authMessage = document.getElementById('authMessage');
+                const emailLabel = document.getElementById('emailLabel');
+                const emailInput = document.getElementById('emailInput');
 
                 // عناصر اليوزرنيم
                 const usernameGroup = document.getElementById('usernameGroup');
@@ -3018,6 +3099,8 @@ pause
                     authSubmitText.textContent = 'Create Account';
                     authToggleText.textContent = 'Already have an account? ';
                     toggleAuthMode.textContent = 'Sign In';
+                    if (emailLabel) emailLabel.textContent = 'Email Address';
+                    if (emailInput) emailInput.placeholder = 'email@domain.com';
                     // إظهار حقل اليوزرنيم وجعله إجباري
                     if (usernameGroup) {
                         usernameGroup.style.display = 'block';
@@ -3030,6 +3113,8 @@ pause
                     authSubmitText.textContent = 'Sign In';
                     authToggleText.textContent = "Don't have an account? ";
                     toggleAuthMode.textContent = 'Sign Up';
+                    if (emailLabel) emailLabel.textContent = 'Email or Username';
+                    if (emailInput) emailInput.placeholder = 'username or email@example.com';
                     // إخفاء حقل اليوزرنيم
                     if (usernameGroup) {
                         usernameGroup.style.display = 'none';
@@ -3086,6 +3171,10 @@ pause
                         userFriendlyMsg = 'The password must be at least 6 characters long.';
                     } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                         userFriendlyMsg = 'Invalid email or password. Please try again.';
+                    } else if (error.code === 'auth/username-taken') {
+                        userFriendlyMsg = 'This username is already taken. Please choose another one.';
+                    } else if (error.code === 'auth/username-not-found') {
+                        userFriendlyMsg = 'Username not found. Please check your spelling or sign up.';
                     }
 
                     if (authMessage) {
@@ -3096,27 +3185,417 @@ pause
                 };
 
                 if (this.authMode === 'signin') {
-                    window.firebaseAuth.signInWithEmailAndPassword(window.auth, email, password)
-                        .then(handleSuccess)
-                        .catch(handleError);
-                } else {
-                    // كود إنشاء الحساب مع ربط اليوزرنيم
-                    window.firebaseAuth.createUserWithEmailAndPassword(window.auth, email, password)
-                        .then((userCredential) => {
-                            const user = userCredential.user;
-                            // لو كتب يوزرنيم هنحدث بروفايل فايربيز بيه
-                            if (username && window.firebaseAuth.updateProfile) {
-                                return window.firebaseAuth.updateProfile(user, { displayName: username })
-                                    .then(() => {
-                                        // تحديث الواجهة فوراً بالاسم الجديد
-                                        this.onUserStatusChanged(user);
-                                        return userCredential;
-                                    });
+                    const isEmail = email.includes('@');
+                    const getEmailPromise = isEmail ? Promise.resolve(email) : (async () => {
+                        if (window.db && window.firestoreUtils) {
+                            const { doc, getDoc } = window.firestoreUtils;
+                            const usernameRef = doc(window.db, "usernames", email.toLowerCase());
+                            const usernameSnap = await getDoc(usernameRef);
+                            if (usernameSnap.exists()) {
+                                return usernameSnap.data().email;
+                            } else {
+                                throw { code: 'auth/username-not-found', message: 'Username not found.' };
                             }
-                            return userCredential;
+                        } else {
+                            throw { code: 'auth/no-firestore', message: 'Cloud database is unavailable.' };
+                        }
+                    })();
+
+                    getEmailPromise
+                        .then((resolvedEmail) => {
+                            return window.firebaseAuth.signInWithEmailAndPassword(window.auth, resolvedEmail, password);
                         })
                         .then(handleSuccess)
                         .catch(handleError);
+                } else {
+                    const checkUsernamePromise = username ? (async () => {
+                        if (window.db && window.firestoreUtils) {
+                            const { doc, getDoc } = window.firestoreUtils;
+                            const usernameRef = doc(window.db, "usernames", username.toLowerCase());
+                            const usernameSnap = await getDoc(usernameRef);
+                            if (usernameSnap.exists()) {
+                                throw { code: 'auth/username-taken', message: 'This username is already taken.' };
+                            }
+                        }
+                    })() : Promise.resolve();
+
+                    checkUsernamePromise
+                        .then(() => {
+                            return window.firebaseAuth.createUserWithEmailAndPassword(window.auth, email, password);
+                        })
+                        .then((userCredential) => {
+                            const user = userCredential.user;
+                            const promises = [];
+                            if (username) {
+                                if (window.firebaseAuth.updateProfile) {
+                                    promises.push(window.firebaseAuth.updateProfile(user, { displayName: username }));
+                                }
+                                if (window.db && window.firestoreUtils) {
+                                    const { doc, setDoc } = window.firestoreUtils;
+                                    const usernameRef = doc(window.db, "usernames", username.toLowerCase());
+                                    promises.push(setDoc(usernameRef, { email: email, uid: user.uid }));
+                                }
+                            }
+                            return Promise.all(promises).then(() => userCredential);
+                        })
+                        .then(handleSuccess)
+                        .catch(handleError);
+                }
+            });
+        }
+    }
+
+    // ============================================
+    // SETTINGS PAGE
+    // ============================================
+
+    getSettingsPageHTML() {
+        const user = this.currentUser;
+        if (!user) return '<p>Please log in to access settings.</p>';
+
+        const displayName = user.displayName || '';
+        const email = user.email || '';
+        const photoURL = this._cachedProfilePic || user.photoURL || '';
+        const initial = (displayName || email || 'U').charAt(0).toUpperCase();
+
+        const eyeOpenSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        const eyeClosedSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+        return `
+            <header class="app-header">
+                <div class="header-content">
+                    <div class="brand-text">
+                        <h1 class="brand-title">Settings</h1>
+                        <p class="brand-subtitle">Manage your profile</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn-secondary" id="settingsBackBtn">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M15 10H5M5 10L9 6M5 10L9 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Back</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="app-main">
+                <div class="settings-container">
+
+                    <!-- Profile Picture -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            Profile Picture
+                        </h3>
+                        <div class="settings-avatar-area">
+                            <div class="settings-avatar-preview" id="settingsAvatarPreview">
+                                ${photoURL ? `<img src="${this.escapeHtml(photoURL)}" alt="Profile">` : `<div class="avatar-fallback-lg">${initial}</div>`}
+                            </div>
+                            <div class="settings-avatar-actions">
+                                <input type="file" id="pictureFileInput" accept="image/*" style="display: none;">
+                                <button class="btn-primary" id="uploadPictureBtn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    Upload Picture
+                                </button>
+                                <button class="btn-danger-outline" id="removePictureBtn">Remove Picture</button>
+                            </div>
+                        </div>
+                        <div id="pictureMsg" class="settings-msg"></div>
+                    </div>
+
+                    <!-- Username -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Username
+                        </h3>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <input type="text" id="settingsUsername" class="form-input" placeholder="Enter your username" value="${this.escapeHtml(displayName)}" maxlength="30" autocomplete="username">
+                        </div>
+                        <div class="settings-action-row">
+                            <button class="btn-primary" id="saveUsernameBtn">Save Username</button>
+                        </div>
+                        <div id="usernameMsg" class="settings-msg"></div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            Email Address
+                        </h3>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <input type="email" id="settingsEmail" class="form-input" placeholder="your@email.com" value="${this.escapeHtml(email)}" autocomplete="email">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0; margin-top: var(--spacing-md);">
+                            <label for="emailReauthPassword" class="form-label">Current Password (required to change email)</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="emailReauthPassword" class="form-input" placeholder="Enter current password" autocomplete="current-password">
+                                <button type="button" class="password-toggle-btn" data-target="emailReauthPassword">${eyeClosedSVG}</button>
+                            </div>
+                        </div>
+                        <div class="settings-action-row">
+                            <button class="btn-primary" id="saveEmailBtn">Save Email</button>
+                        </div>
+                        <div id="emailMsg" class="settings-msg"></div>
+                    </div>
+
+                    <!-- Change Password -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            Change Password
+                        </h3>
+                        <div class="form-group">
+                            <label for="currentPassword" class="form-label">Current Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="currentPassword" class="form-input" placeholder="Enter current password" autocomplete="current-password">
+                                <button type="button" class="password-toggle-btn" data-target="currentPassword">${eyeClosedSVG}</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword" class="form-label">New Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="newPassword" class="form-input" placeholder="Enter new password" minlength="6" autocomplete="new-password">
+                                <button type="button" class="password-toggle-btn" data-target="newPassword">${eyeClosedSVG}</button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm new password" minlength="6" autocomplete="new-password">
+                                <button type="button" class="password-toggle-btn" data-target="confirmPassword">${eyeClosedSVG}</button>
+                            </div>
+                        </div>
+                        <div class="settings-action-row">
+                            <button class="btn-primary" id="changePasswordBtn">Update Password</button>
+                        </div>
+                        <div id="passwordMsg" class="settings-msg"></div>
+                    </div>
+                </div>
+            </main>
+        `;
+    }
+
+    setupSettingsEventListeners() {
+        const eyeOpenSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        const eyeClosedSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+        const showMsg = (elId, text, type) => {
+            const el = document.getElementById(elId);
+            if (el) {
+                el.textContent = text;
+                el.className = `settings-msg ${type}`;
+            }
+        };
+
+        const clearMsg = (elId) => {
+            const el = document.getElementById(elId);
+            if (el) { el.className = 'settings-msg'; el.style.display = 'none'; }
+        };
+
+        // Back button
+        const backBtn = document.getElementById('settingsBackBtn');
+        if (backBtn) backBtn.addEventListener('click', () => this.switchPage('habits'));
+
+        // Password eye toggles
+        document.querySelectorAll('.password-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.target;
+                const input = document.getElementById(targetId);
+                if (!input) return;
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    btn.innerHTML = eyeOpenSVG;
+                } else {
+                    input.type = 'password';
+                    btn.innerHTML = eyeClosedSVG;
+                }
+            });
+        });
+
+        // Upload Picture — trigger hidden file input
+        const uploadPictureBtn = document.getElementById('uploadPictureBtn');
+        const pictureFileInput = document.getElementById('pictureFileInput');
+        if (uploadPictureBtn && pictureFileInput) {
+            uploadPictureBtn.addEventListener('click', () => pictureFileInput.click());
+
+            pictureFileInput.addEventListener('change', async () => {
+                const file = pictureFileInput.files[0];
+                if (!file) return;
+
+                // Validate file type and size (max 2MB)
+                if (!file.type.startsWith('image/')) {
+                    showMsg('pictureMsg', 'Please select an image file.', 'error');
+                    return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                    showMsg('pictureMsg', 'Image must be smaller than 2MB.', 'error');
+                    return;
+                }
+
+                clearMsg('pictureMsg');
+                showMsg('pictureMsg', 'Uploading...', 'success');
+
+                try {
+                    // Read and resize image to base64
+                    const base64 = await this.resizeImageToBase64(file, 200);
+
+                    // Save to Firestore (base64 stored directly)
+                    if (window.db && window.firestoreUtils) {
+                        const { doc, setDoc } = window.firestoreUtils;
+                        await setDoc(doc(window.db, "users", this.currentUser.uid), { profilePicUrl: base64 }, { merge: true });
+                    }
+
+                    // Update Firebase Auth photoURL with the base64 (short data URIs work)
+                    await window.firebaseAuth.updateProfile(window.auth.currentUser, { photoURL: base64 }).catch(() => {
+                        // photoURL has a length limit in Firebase Auth — store only in Firestore if too long
+                        console.warn('photoURL too long for Auth profile, stored in Firestore only.');
+                    });
+
+                    // Update preview
+                    this._cachedProfilePic = base64;
+                    document.getElementById('settingsAvatarPreview').innerHTML = `<img src="${base64}" alt="Profile">`;
+                    this.updateNavbarAvatar(base64, this.currentUser.displayName, this.currentUser.email);
+                    showMsg('pictureMsg', 'Profile picture updated!', 'success');
+                } catch (err) {
+                    showMsg('pictureMsg', err.message || 'Failed to upload picture.', 'error');
+                }
+            });
+        }
+
+        // Remove Picture
+        const removePictureBtn = document.getElementById('removePictureBtn');
+        if (removePictureBtn) {
+            removePictureBtn.addEventListener('click', async () => {
+                clearMsg('pictureMsg');
+                try {
+                    await window.firebaseAuth.updateProfile(window.auth.currentUser, { photoURL: '' });
+                    if (window.db && window.firestoreUtils) {
+                        const { doc, setDoc } = window.firestoreUtils;
+                        await setDoc(doc(window.db, "users", this.currentUser.uid), { profilePicUrl: null }, { merge: true });
+                    }
+                    this._cachedProfilePic = null;
+                    const initial = ((this.currentUser?.displayName || this.currentUser?.email || 'U').charAt(0)).toUpperCase();
+                    document.getElementById('settingsAvatarPreview').innerHTML = `<div class="avatar-fallback-lg">${initial}</div>`;
+                    this.updateNavbarAvatar(null, this.currentUser.displayName, this.currentUser.email);
+                    showMsg('pictureMsg', 'Profile picture removed.', 'success');
+                } catch (err) {
+                    showMsg('pictureMsg', err.message || 'Failed to remove picture.', 'error');
+                }
+            });
+        }
+
+        // Save Username
+        const saveUsernameBtn = document.getElementById('saveUsernameBtn');
+        if (saveUsernameBtn) {
+            saveUsernameBtn.addEventListener('click', async () => {
+                clearMsg('usernameMsg');
+                const newUsername = document.getElementById('settingsUsername')?.value.trim();
+                if (!newUsername) { showMsg('usernameMsg', 'Username cannot be empty.', 'error'); return; }
+
+                const oldUsername = this.currentUser?.displayName;
+                if (newUsername === oldUsername) { showMsg('usernameMsg', 'Username is already set to this.', 'success'); return; }
+
+                try {
+                    // Check if new username is taken
+                    if (window.db && window.firestoreUtils) {
+                        const { doc, getDoc, setDoc, deleteDoc } = window.firestoreUtils;
+                        const newRef = doc(window.db, "usernames", newUsername.toLowerCase());
+                        const snap = await getDoc(newRef);
+                        if (snap.exists() && snap.data().uid !== this.currentUser.uid) {
+                            showMsg('usernameMsg', 'This username is already taken.', 'error');
+                            return;
+                        }
+
+                        // Update profile
+                        await window.firebaseAuth.updateProfile(window.auth.currentUser, { displayName: newUsername });
+
+                        // Delete old mapping
+                        if (oldUsername) {
+                            const oldRef = doc(window.db, "usernames", oldUsername.toLowerCase());
+                            await deleteDoc(oldRef).catch(() => { });
+                        }
+                        // Create new mapping
+                        await setDoc(newRef, { email: this.currentUser.email, uid: this.currentUser.uid });
+                    } else {
+                        await window.firebaseAuth.updateProfile(window.auth.currentUser, { displayName: newUsername });
+                    }
+
+                    this.onUserStatusChanged(window.auth.currentUser);
+                    showMsg('usernameMsg', 'Username updated successfully!', 'success');
+                } catch (err) {
+                    showMsg('usernameMsg', err.message || 'Failed to update username.', 'error');
+                }
+            });
+        }
+
+        // Save Email
+        const saveEmailBtn = document.getElementById('saveEmailBtn');
+        if (saveEmailBtn) {
+            saveEmailBtn.addEventListener('click', async () => {
+                clearMsg('emailMsg');
+                const newEmail = document.getElementById('settingsEmail')?.value.trim();
+                const password = document.getElementById('emailReauthPassword')?.value;
+
+                if (!newEmail) { showMsg('emailMsg', 'Email cannot be empty.', 'error'); return; }
+                if (!password) { showMsg('emailMsg', 'Please enter your current password to change email.', 'error'); return; }
+                if (newEmail === this.currentUser?.email) { showMsg('emailMsg', 'Email is already set to this.', 'success'); return; }
+
+                try {
+                    const credential = window.firebaseAuth.EmailAuthProvider.credential(this.currentUser.email, password);
+                    await window.firebaseAuth.reauthenticateWithCredential(window.auth.currentUser, credential);
+                    await window.firebaseAuth.updateEmail(window.auth.currentUser, newEmail);
+
+                    // Update username mapping if exists
+                    if (this.currentUser.displayName && window.db && window.firestoreUtils) {
+                        const { doc, setDoc } = window.firestoreUtils;
+                        const usernameRef = doc(window.db, "usernames", this.currentUser.displayName.toLowerCase());
+                        await setDoc(usernameRef, { email: newEmail, uid: this.currentUser.uid }, { merge: true });
+                    }
+
+                    this.onUserStatusChanged(window.auth.currentUser);
+                    showMsg('emailMsg', 'Email updated successfully!', 'success');
+                    document.getElementById('emailReauthPassword').value = '';
+                } catch (err) {
+                    let msg = err.message;
+                    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = 'Incorrect password.';
+                    else if (err.code === 'auth/email-already-in-use') msg = 'This email is already in use.';
+                    else if (err.code === 'auth/invalid-email') msg = 'Please enter a valid email.';
+                    showMsg('emailMsg', msg, 'error');
+                }
+            });
+        }
+
+        // Change Password
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+        if (changePasswordBtn) {
+            changePasswordBtn.addEventListener('click', async () => {
+                clearMsg('passwordMsg');
+                const currentPw = document.getElementById('currentPassword')?.value;
+                const newPw = document.getElementById('newPassword')?.value;
+                const confirmPw = document.getElementById('confirmPassword')?.value;
+
+                if (!currentPw) { showMsg('passwordMsg', 'Please enter your current password.', 'error'); return; }
+                if (!newPw) { showMsg('passwordMsg', 'Please enter a new password.', 'error'); return; }
+                if (newPw.length < 6) { showMsg('passwordMsg', 'New password must be at least 6 characters.', 'error'); return; }
+                if (newPw !== confirmPw) { showMsg('passwordMsg', 'New passwords do not match.', 'error'); return; }
+
+                try {
+                    const credential = window.firebaseAuth.EmailAuthProvider.credential(this.currentUser.email, currentPw);
+                    await window.firebaseAuth.reauthenticateWithCredential(window.auth.currentUser, credential);
+                    await window.firebaseAuth.updatePassword(window.auth.currentUser, newPw);
+
+                    showMsg('passwordMsg', 'Password updated successfully!', 'success');
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } catch (err) {
+                    let msg = err.message;
+                    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = 'Current password is incorrect.';
+                    else if (err.code === 'auth/weak-password') msg = 'New password is too weak. Use at least 6 characters.';
+                    showMsg('passwordMsg', msg, 'error');
                 }
             });
         }

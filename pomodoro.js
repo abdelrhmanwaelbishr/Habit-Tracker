@@ -292,7 +292,11 @@ class PomodoroTimer {
             document.body.classList.add('dark-theme');
         }
 
-        const accentColor = localStorage.getItem('accentColor');
+        let accentColor = localStorage.getItem('accentColor');
+        if (accentColor === '#10B981') {
+            accentColor = '#FF6B35';
+            localStorage.setItem('accentColor', '#FF6B35');
+        }
         if (accentColor) {
             const isDark = savedTheme === 'dark';
             if (isDark && accentColor === '#1C1917') {
@@ -322,7 +326,7 @@ class PomodoroTimer {
 
     toggleAccentDropdown(event) {
         if (event) event.stopPropagation();
-        
+
         const dropdown = document.getElementById('accentColorDropdown');
         if (dropdown) {
             dropdown.classList.toggle('show');
@@ -356,15 +360,15 @@ class PomodoroTimer {
         dropdown.innerHTML = `
             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: 700; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--color-border); text-transform: uppercase; letter-spacing: 0.5px;">Accent Theme</div>
             ${options.map(opt => {
-                const isActive = savedColor.toUpperCase() === opt.hex.toUpperCase();
-                return `
+            const isActive = savedColor.toUpperCase() === opt.hex.toUpperCase();
+            return `
                     <button class="accent-color-option ${isActive ? 'active' : ''}" onclick="pomodoroTimer.selectAccentColor('${opt.hex}')">
                         <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${opt.hex}; border: 1px solid ${opt.hex === '#FFFFFF' ? '#78716C' : 'transparent'};"></span>
                         <span style="flex: 1; font-weight: 600;">${opt.name}</span>
                         ${isActive ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8L6 11L13 4"/></svg>' : ''}
                     </button>
                 `;
-            }).join('')}
+        }).join('')}
         `;
     }
 
@@ -378,10 +382,10 @@ class PomodoroTimer {
         root.style.setProperty('--color-primary', hex);
         root.style.setProperty('--color-primary-light', this.adjustColorBrightness(hex, 15));
         root.style.setProperty('--color-primary-dark', this.adjustColorBrightness(hex, -15));
-        
+
         const contrastHex = this.getContrastColor(hex);
         root.style.setProperty('--color-primary-contrast', contrastHex);
-        
+
         localStorage.setItem('accentColor', hex);
     }
 
@@ -395,12 +399,12 @@ class PomodoroTimer {
     }
 
     adjustColorBrightness(hex, percent) {
-        let num = parseInt(hex.replace("#",""), 16),
+        let num = parseInt(hex.replace("#", ""), 16),
             amt = Math.round(2.55 * percent),
             R = (num >> 16) + amt,
             G = (num >> 8 & 0x00FF) + amt,
             B = (num & 0x0000FF) + amt;
-        return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+        return "#" + (0x1000000 + (R < 255 ? R < 0 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 0 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 0 ? 0 : B : 255)).toString(16).slice(1);
     }
 }
 
