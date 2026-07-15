@@ -482,6 +482,645 @@
         </div>
     </div>
 
+    <!-- Page Templates -->
+    <template id="habitsPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Habits</h1>
+                    <p class="brand-subtitle">Build better, daily</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" id="addHabitBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        <span>New Habit</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <section class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-blue">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                                fill="currentColor" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Active Habits</p>
+                        <p class="stat-value" id="activeHabitsCount">0</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Completed Today</p>
+                        <p class="stat-value" id="completedTodayCount">0</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-orange">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Current Streak</p>
+                        <p class="stat-value" id="currentStreak">0</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="habits-section">
+                <div class="section-header">
+                    <h2 class="section-title">Your Habits</h2>
+                    <div class="view-controls">
+                        <button class="view-btn active" id="gridViewBtn" data-view="grid" title="Grid view">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                <rect x="2" y="2" width="6" height="6" rx="1.5" fill="currentColor" />
+                                <rect x="10" y="2" width="6" height="6" rx="1.5" fill="currentColor" />
+                                <rect x="2" y="10" width="6" height="6" rx="1.5" fill="currentColor" />
+                                <rect x="10" y="10" width="6" height="6" rx="1.5" fill="currentColor" />
+                            </svg>
+                        </button>
+                        <button class="view-btn" id="listViewBtn" data-view="list" title="List view">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                <rect x="2" y="3" width="14" height="3" rx="1.5" fill="currentColor" />
+                                <rect x="2" y="8" width="14" height="3" rx="1.5" fill="currentColor" />
+                                <rect x="2" y="13" width="14" height="3" rx="1.5" fill="currentColor" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-icon" onclick="app.openModal('habitModal')" title="Create habit">
+                        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                            <circle cx="40" cy="40" r="38" stroke="currentColor" stroke-width="2" stroke-dasharray="8 8"
+                                opacity="0.2" />
+                            <path d="M40 25V55M25 40H55" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                                opacity="0.3" />
+                        </svg>
+                    </div>
+                    <h3 class="empty-title">No habits yet</h3>
+                    <p class="empty-description">Start building better routines by creating your first habit.</p>
+                </div>
+
+                <div id="habitsGrid" class="habits-grid"></div>
+            </section>
+        </main>
+    </template>
+
+    <template id="todoPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">To-Do List</h1>
+                    <p class="brand-subtitle">Stay organized, get things done</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" id="addTaskBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        <span>New Task</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <section class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-blue">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M21 12V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H16"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Total Tasks</p>
+                        <p class="stat-value" id="totalTasksCount">0</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Completed</p>
+                        <p class="stat-value" id="completedTasksCount">0</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-orange">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Pending</p>
+                        <p class="stat-value" id="pendingTasksCount">0</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tasks-section">
+                <div class="section-header">
+                    <h2 class="section-title">Your Tasks</h2>
+                    <div class="controls-wrapper" style="display: flex; gap: 12px; align-items: center;">
+                        <!-- View Switches -->
+                        <div class="view-controls">
+                            <button class="view-btn active" id="taskListViewBtn" data-view="list" title="List view">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                    <rect x="2" y="3" width="14" height="3" rx="1.5" fill="currentColor" />
+                                    <rect x="2" y="8" width="14" height="3" rx="1.5" fill="currentColor" />
+                                    <rect x="2" y="13" width="14" height="3" rx="1.5" fill="currentColor" />
+                                </svg>
+                            </button>
+                            <button class="view-btn" id="taskGridViewBtn" data-view="grid" title="Grid view">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                    <rect x="2" y="2" width="6" height="6" rx="1.5" fill="currentColor" />
+                                    <rect x="10" y="2" width="6" height="6" rx="1.5" fill="currentColor" />
+                                    <rect x="2" y="10" width="6" height="6" rx="1.5" fill="currentColor" />
+                                    <rect x="10" y="10" width="6" height="6" rx="1.5" fill="currentColor" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Sort -->
+                        <select id="taskSortSelect" class="sort-select">
+                            <option value="default">Sort by...</option>
+                            <option value="priority-high">Priority (High to Low)</option>
+                            <option value="priority-low">Priority (Low to High)</option>
+                        </select>
+
+                        <!-- Filters -->
+                        <div class="filter-controls">
+                            <button class="filter-btn active" data-filter="pending">Pending</button>
+                            <button class="filter-btn" data-filter="completed">Completed</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tasksList" class="tasks-list"></div>
+
+                <div id="emptyTasksState" class="empty-state" style="display: none;">
+                    <div class="empty-icon clickable" id="emptyStateAddBtn">
+                        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                            <rect x="15" y="15" width="50" height="50" rx="8" stroke="currentColor" stroke-width="2"
+                                stroke-dasharray="8 8" opacity="0.2" />
+                            <path d="M40 30V50M30 40H50" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                                opacity="0.3" class="plus-path" />
+                        </svg>
+                    </div>
+                    <h3 class="empty-title">Come on, Create your first task!</h3>
+                </div>
+
+                <div id="emptyCompletedState" class="empty-state" style="display: none;">
+                    <h3 class="empty-title">Come on, Finish your first task!</h3>
+                </div>
+            </section>
+        </main>
+    </template>
+
+    <template id="pomodoroPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Pomodoro Timer</h1>
+                    <p class="brand-subtitle">Focus better, work smarter</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <section class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-blue">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Sessions Today</p>
+                        <p class="stat-value" id="sessionsToday">0</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Focus Time</p>
+                        <p class="stat-value" id="totalFocusTime">0m</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-orange">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                                fill="currentColor" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Current Streak</p>
+                        <p class="stat-value" id="currentStreak">0</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="pomodoro-section">
+                <div class="pomodoro-card">
+                    <div class="pomodoro-header-row">
+                        <div class="mode-selector">
+                            <button class="mode-btn active" data-mode="work">Work</button>
+                            <button class="mode-btn" data-mode="short">Short Break</button>
+                            <button class="mode-btn" data-mode="long">Long Break</button>
+                        </div>
+                        <button class="btn-settings-icon" id="settingsBtn" title="Pomodoro Settings">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="timer-display">
+                        <svg class="timer-ring" width="320" height="320" viewBox="0 0 320 320">
+                            <circle class="timer-ring-bg" cx="160" cy="160" r="140" />
+                            <circle class="timer-ring-progress" cx="160" cy="160" r="140" id="timerProgress" />
+                        </svg>
+                        <div class="timer-content">
+                            <div class="timer-time" id="timerDisplay">25:00</div>
+                            <div class="timer-label" id="timerLabel">Focus Time</div>
+                        </div>
+                    </div>
+
+                    <div class="timer-controls">
+                        <button class="btn-timer-primary" id="startBtn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M8 5V19L19 12L8 5Z" fill="currentColor" />
+                            </svg>
+                            <span>Start</span>
+                        </button>
+                        <button class="btn-timer-secondary" id="resetBtn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C9.25 4 6.82 5.38 5.38 7.5"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                <path d="M4 4V8H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </template>
+
+    <template id="playlistPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Playlist Tracker</h1>
+                    <p class="brand-subtitle">Track your learning journey</p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: var(--spacing-md); align-items: center;">
+                    <div id="playlistStreakWrapper" class="motivational-toggle-wrapper"
+                        style="display: flex; align-items: center; gap: var(--spacing-sm); background: var(--color-surface); padding: 0.5rem 1rem; border-radius: var(--radius-full); border: 1.5px solid var(--color-border); font-size: var(--font-size-sm); font-weight: 500; transition: opacity var(--transition-fast);">
+                        <span style="color: var(--color-text-secondary);">Streak:</span>
+                        <span id="StreakCounter" style="font-weight: 700; color: var(--color-primary);"></span>
+                        <button id="resetStreakBtn" title="Reset Streak" onclick="app.resetPlaylistStreak()"
+                            style="background: transparent; border: none; padding: 2px; cursor: pointer; color: var(--color-text-tertiary); display: none; align-items: center; justify-content: center; transition: color var(--transition-fast); margin-left: 2px; margin-right: 2px;"
+                            onmouseover="this.style.color='var(--color-primary)'"
+                            onmouseout="this.style.color='var(--color-text-tertiary)'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                            </svg>
+                        </button>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleMotivationalQuotes"
+                                onchange="app.toggleMotivationalQuotesSetting(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <button class="btn-primary" id="addPlaylistBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        <span>Add Playlist</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <section class="playlists-section">
+                <div id="playlistsContainer"></div>
+
+                <div id="playlistEmptyState" class="playlist-empty-state" style="display: none;">
+                    <div class="empty-icon">
+                        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                            <rect x="10" y="20" width="60" height="40" rx="4" stroke="currentColor" stroke-width="2"
+                                stroke-dasharray="8 8" opacity="0.2" />
+                            <path d="M35 30L50 40L35 50V30Z" stroke="currentColor" stroke-width="3"
+                                stroke-linecap="round" opacity="0.3" />
+                        </svg>
+                    </div>
+                    <h3 class="empty-title">No Playlists Yet</h3>
+                    <p class="empty-description">Import a YouTube playlist to start tracking your progress.</p>
+                    <button class="btn-secondary" onclick="app.openModal('playlistModal')">
+                        Import Playlist
+                    </button>
+                </div>
+            </section>
+        </main>
+    </template>
+
+    <template id="authPageTemplate">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h2 class="auth-title" id="authTitle">Sign In</h2>
+                <p class="auth-subtitle" id="authSubtitle">Access your productivity hub</p>
+            </div>
+
+            <div id="authMessage" class="auth-message"></div>
+
+            <form id="authForm" class="modal-form" style="padding: 0;">
+                <div class="form-group" id="usernameGroup" style="display: none;">
+                    <label for="usernameInput" class="form-label">Username</label>
+                    <input type="text" id="usernameInput" class="form-input" placeholder="Enter Username"
+                        autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="emailInput" class="form-label" id="emailLabel">Email or Username</label>
+                    <input type="text" id="emailInput" class="form-input" placeholder="Email/Username" required
+                        autocomplete="username email">
+                </div>
+
+                <div class="form-group">
+                    <label for="passwordInput" class="form-label">Password</label>
+                    <input type="password" id="passwordInput" class="form-input" placeholder="••••••••" required
+                        autocomplete="current-password" minlength="6">
+                </div>
+
+                <button type="submit" class="btn-primary" id="submitAuthBtn"
+                    style="width: 100%; justify-content: center; margin-top: var(--spacing-md); height: 48px;">
+                    <span id="authSubmitText">Sign In</span>
+                </button>
+            </form>
+
+            <div class="auth-form-footer">
+                <span id="authToggleText">Don't have an account? </span>
+                <a class="auth-toggle-link" id="toggleAuthMode">Sign Up</a>
+            </div>
+        </div>
+    </template>
+
+    <template id="settingsPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Settings</h1>
+                    <p class="brand-subtitle">Manage your profile</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-secondary" id="settingsBackBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M15 10H5M5 10L9 6M5 10L9 14" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>Back</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <div class="settings-container">
+                <!-- Profile Picture -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        Profile Picture
+                    </h3>
+                    <div class="settings-avatar-area">
+                        <div class="settings-avatar-preview" id="settingsAvatarPreview">
+                        </div>
+                        <div class="settings-avatar-actions">
+                            <input type="file" id="pictureFileInput" accept="image/*" style="display: none;">
+                            <button class="btn-primary" id="uploadPictureBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Upload Picture
+                            </button>
+                            <button class="btn-danger-outline" id="removePictureBtn">Remove Picture</button>
+                        </div>
+                    </div>
+                    <div id="pictureMsg" class="settings-msg"></div>
+                </div>
+
+                <!-- Username -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        Username
+                    </h3>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" id="settingsUsername" class="form-input" placeholder="Enter your username"
+                            maxlength="30" autocomplete="username">
+                    </div>
+                    <div class="settings-action-row">
+                        <button class="btn-primary" id="saveUsernameBtn">Save Username</button>
+                    </div>
+                    <div id="usernameMsg" class="settings-msg"></div>
+                </div>
+
+                <!-- Email -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        Email Address
+                    </h3>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="email" id="settingsEmail" class="form-input" placeholder="your@email.com"
+                            autocomplete="email">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; margin-top: var(--spacing-md);">
+                        <label for="emailReauthPassword" class="form-label">Current Password (required to change
+                            email)</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="emailReauthPassword" class="form-input"
+                                placeholder="Enter current password" autocomplete="current-password">
+                            <button type="button" class="password-toggle-btn" data-target="emailReauthPassword"><svg
+                                    width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                </svg></button>
+                        </div>
+                    </div>
+                    <div class="settings-action-row">
+                        <button class="btn-primary" id="saveEmailBtn">Save Email</button>
+                    </div>
+                    <div id="emailMsg" class="settings-msg"></div>
+                </div>
+
+                <!-- Change Password -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Change Password
+                    </h3>
+                    <div class="form-group">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="currentPassword" class="form-input"
+                                placeholder="Enter current password" autocomplete="current-password">
+                            <button type="button" class="password-toggle-btn" data-target="currentPassword"><svg
+                                    width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                </svg></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="newPassword" class="form-input" placeholder="Enter new password"
+                                minlength="6" autocomplete="new-password">
+                            <button type="button" class="password-toggle-btn" data-target="newPassword"><svg width="18"
+                                    height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                </svg></button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="confirmPassword" class="form-input"
+                                placeholder="Confirm new password" minlength="6" autocomplete="new-password">
+                            <button type="button" class="password-toggle-btn" data-target="confirmPassword"><svg
+                                    width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                </svg></button>
+                        </div>
+                    </div>
+                    <div class="settings-action-row">
+                        <button class="btn-primary" id="changePasswordBtn">Update Password</button>
+                    </div>
+                    <div id="passwordMsg" class="settings-msg"></div>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <!-- Motivational Modal -->
+    <div id="motivationalPopup" class="modal">
+        <div class="modal-backdrop" onclick="app.closeMotivationalPopup()"></div>
+        <div class="modal-container">
+            <div class="modal-content motivational-content"
+                style="text-align: center; padding: var(--spacing-xl); max-width: 450px; margin: 0 auto; position: relative; z-index: 1001; animation: modalPop 0.4s var(--transition-spring);">
+                <div class="motivational-icon" style="font-size: 3.5rem; margin-bottom: var(--spacing-sm);">
+                    🎉
+                </div>
+                <h2 class="modal-title"
+                    style="margin-bottom: var(--spacing-sm); font-family: var(--font-display); color: var(--color-primary); font-size: var(--font-size-2xl);">
+                    Streak Completed!</h2>
+                <p id="motivationalMessage"
+                    style="font-size: var(--font-size-base); color: var(--color-text-primary); margin-bottom: var(--spacing-lg); line-height: 1.6; font-weight: 500;">
+                </p>
+                <button class="btn-primary" style="margin: 0 auto; display: block;"
+                    onclick="app.closeMotivationalPopup()">
+                    Keep Going!
+                </button>
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes modalPop {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
