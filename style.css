@@ -1,34 +1,34 @@
 :root {
-    /* Color Palette - Warm & Refined */
-    --color-primary: #FF6B35;
-    --color-primary-light: #FF8C61;
-    --color-primary-dark: #E85A2A;
+    /* Color Palette - Active Morning ☀️ */
+    --color-primary: #0EA5A0;
+    --color-primary-light: #2DD4BF;
+    --color-primary-dark: #0D8F8A;
 
-    --color-secondary: #4A90E2;
-    --color-secondary-light: #6BA8F0;
-    --color-secondary-dark: #3A7BC8;
+    --color-secondary: #38BDF8;
+    --color-secondary-light: #7DD3FC;
+    --color-secondary-dark: #0284C7;
 
-    --color-success: #52C41A;
-    --color-success-light: #73D13D;
-    --color-success-bg: #F6FFED;
+    --color-success: #22C55E;
+    --color-success-light: #4ADE80;
+    --color-success-bg: #F0FDF4;
 
-    --color-warning: #FAAD14;
-    --color-warning-light: #FFC53D;
-    --color-warning-bg: #FFFBE6;
+    --color-warning: #F59E0B;
+    --color-warning-light: #FBBF24;
+    --color-warning-bg: #FFFBEB;
 
-    --color-danger: #FF4D4F;
-    --color-danger-light: #FF7875;
-    --color-danger-bg: #FFF1F0;
+    --color-danger: #EF4444;
+    --color-danger-light: #F87171;
+    --color-danger-bg: #FEF2F2;
 
-    /* Neutrals - Soft & Warm */
-    --color-bg: #FAFAF9;
+    /* Neutrals - Crisp & Clean */
+    --color-bg: #F0F9FF;
     --color-surface: #FFFFFF;
-    --color-border: #E7E5E4;
-    --color-border-light: #F5F5F4;
+    --color-border: #E0F2FE;
+    --color-border-light: #F0F9FF;
 
-    --color-text-primary: #1C1917;
-    --color-text-secondary: #78716C;
-    --color-text-tertiary: #A8A29E;
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #64748B;
+    --color-text-tertiary: #94A3B8;
 
     /* Typography */
     --font-display: 'Fraunces', serif;
@@ -75,18 +75,18 @@
 
 /* Dark Theme */
 body.dark-theme {
-    --color-bg: #1C1917;
-    --color-surface: #292524;
-    --color-border: #44403C;
-    --color-border-light: #3C3836;
+    --color-bg: #0F172A;
+    --color-surface: #1E293B;
+    --color-border: #334155;
+    --color-border-light: #1E293B;
 
-    --color-text-primary: #FAFAF9;
-    --color-text-secondary: #D6D3D1;
-    --color-text-tertiary: #A8A29E;
+    --color-text-primary: #F8FAFC;
+    --color-text-secondary: #CBD5E1;
+    --color-text-tertiary: #94A3B8;
 
-    --color-success-bg: #1A3A1A;
-    --color-warning-bg: #3A2F1A;
-    --color-danger-bg: #3A1A1A;
+    --color-success-bg: #052E16;
+    --color-warning-bg: #451A03;
+    --color-danger-bg: #450A0A;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -174,7 +174,7 @@ body {
 
 .nav-link.active {
     color: var(--color-primary);
-    background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 140, 97, 0.1));
+    background: linear-gradient(135deg, rgba(14, 165, 160, 0.08), rgba(45, 212, 191, 0.08));
 }
 
 .nav-link.active::after {

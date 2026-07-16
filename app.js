@@ -61,16 +61,16 @@ class ProductivityHub {
         }
 
         let accentColor = localStorage.getItem('accentColor');
-        if (accentColor === '#10B981') {
-            accentColor = '#FF6B35';
-            localStorage.setItem('accentColor', '#FF6B35');
+        if (accentColor === '#10B981' || accentColor === '#FF6B35') {
+            accentColor = '#0EA5A0';
+            localStorage.setItem('accentColor', '#0EA5A0');
         }
         if (accentColor) {
             const isDark = theme === 'dark';
-            if (isDark && accentColor === '#1C1917') {
-                this.setAccentColor('#FF6B35');
+            if (isDark && accentColor === '#0F172A') {
+                this.setAccentColor('#0EA5A0');
             } else if (!isDark && accentColor === '#FFFFFF') {
-                this.setAccentColor('#FF6B35');
+                this.setAccentColor('#0EA5A0');
             } else {
                 this.setAccentColor(accentColor);
             }
@@ -83,10 +83,10 @@ class ProductivityHub {
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
         const accentColor = localStorage.getItem('accentColor');
-        if (isDark && accentColor === '#1C1917') {
-            this.setAccentColor('#FF6B35');
+        if (isDark && accentColor === '#0F172A') {
+            this.setAccentColor('#0EA5A0');
         } else if (!isDark && accentColor === '#FFFFFF') {
-            this.setAccentColor('#FF6B35');
+            this.setAccentColor('#0EA5A0');
         }
 
         this.renderAccentDropdown();
@@ -109,14 +109,15 @@ class ProductivityHub {
         if (!dropdown) return;
 
         const isDark = document.body.classList.contains('dark-theme');
-        const savedColor = localStorage.getItem('accentColor') || '#FF6B35';
+        const savedColor = localStorage.getItem('accentColor') || '#0EA5A0';
 
         const allOptions = [
-            { name: 'Orange', hex: '#FF6B35' },
-            { name: 'Blue', hex: '#4A90E2' },
+            { name: 'Teal', hex: '#0EA5A0' },
+            { name: 'Sky Blue', hex: '#38BDF8' },
+            { name: 'Sunrise', hex: '#F59E0B' },
             { name: 'Purple', hex: '#8A2BE2' },
             { name: 'White', hex: '#FFFFFF', darkOnly: true },
-            { name: 'Black', hex: '#1C1917', lightOnly: true }
+            { name: 'Slate', hex: '#0F172A', lightOnly: true }
         ];
 
         const options = allOptions.filter(opt => {
@@ -1386,7 +1387,7 @@ class ProductivityHub {
 
         // Update page title
         // Update page title
-        document.title = "Bishr's Hub";
+        document.title = "ProTrack";
     }
 
     openPomodoroSettings() {
