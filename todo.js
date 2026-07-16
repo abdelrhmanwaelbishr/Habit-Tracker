@@ -3,6 +3,11 @@ class TodoApp {
     constructor() {
         this.tasks = this.loadTasks();
         this.currentFilter = 'all';
+        
+        // Initialize Level and XP System
+        this.userLevel = parseInt(localStorage.getItem('userLevel')) || 1;
+        this.userXP = parseInt(localStorage.getItem('userXP')) || 0;
+
         this.init();
     }
 
@@ -11,6 +16,7 @@ class TodoApp {
         this.renderTasks();
         this.updateStats();
         this.initTheme();
+        this.updateXPUI();
     }
 
     setupEventListeners() {
@@ -123,10 +129,15 @@ class TodoApp {
     toggleTask(taskId) {
         const task = this.tasks.find(t => t.id === taskId);
         if (task) {
+            const wasCompleted = task.completed;
             task.completed = !task.completed;
             this.saveTasks();
             this.renderTasks();
             this.updateStats();
+
+            if (task.completed && !wasCompleted) {
+                this.gainXP(30, "Task Completed");
+            }
         }
     }
 
@@ -350,6 +361,165 @@ class TodoApp {
             G = (num >> 8 & 0x00FF) + amt,
             B = (num & 0x0000FF) + amt;
         return "#" + (0x1000000 + (R < 255 ? R < 0 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 0 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 0 ? 0 : B : 255)).toString(16).slice(1);
+    }
+
+    // ============================================
+    // GAMIFICATION AND XP SYSTEM (STANDALONE SYNC)
+    // ============================================
+
+    gainXP(amount, reason) {
+        this.userXP += amount;
+        let leveledUp = false;
+
+        while (this.userXP >= this.getXPNeededForLevel(this.userLevel)) {
+            this.userXP -= this.getXPNeededForLevel(this.userLevel);
+            this.userLevel++;
+            leveledUp = true;
+        }
+
+        // Save locally
+        localStorage.setItem('userLevel', this.userLevel);
+        localStorage.setItem('userXP', this.userXP);
+
+        this.updateXPUI();
+        this.showXPFloatingText(amount, reason);
+
+        if (leveledUp) {
+            this.showLevelUpCelebration();
+        }
+    }
+
+    getXPNeededForLevel(level) {
+        return level * 500;
+    }
+
+    updateXPUI() {
+        const levelBadge = document.getElementById('globalLevelBadge');
+        const xpText = document.getElementById('globalXPText');
+        const xpBarFill = document.getElementById('globalXPBarFill');
+
+        const needed = this.getXPNeededForLevel(this.userLevel);
+        const percent = Math.min(100, Math.max(0, (this.userXP / needed) * 100));
+
+        if (levelBadge) levelBadge.textContent = `L${this.userLevel}`;
+        if (xpText) xpText.textContent = `${this.userXP} / ${needed} XP`;
+        if (xpBarFill) xpBarFill.style.width = `${percent}%`;
+    }
+
+    showXPFloatingText(amount, reason) {
+        const badge = document.getElementById('globalLevelBadge');
+        if (!badge) return;
+
+        const rect = badge.getBoundingClientRect();
+        const floatingText = document.createElement('div');
+        floatingText.className = 'xp-floating-text';
+        floatingText.style.left = `${rect.left + rect.width / 2}px`;
+        floatingText.style.top = `${rect.top}px`;
+        floatingText.style.transform = 'translate(-50%, -100%)';
+        floatingText.style.color = 'var(--color-primary)';
+        floatingText.style.fontWeight = '800';
+        floatingText.style.fontSize = 'var(--font-size-lg)';
+        floatingText.innerHTML = `+${amount} XP <span style="font-size: var(--font-size-xs); font-weight: 500; color: var(--color-text-secondary); display: block; text-align: center;">${reason}</span>`;
+
+        document.body.appendChild(floatingText);
+
+        setTimeout(() => {
+            floatingText.remove();
+        }, 1200);
+    }
+
+    showLevelUpCelebration() {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+        overlay.style.backdropFilter = 'blur(4px)';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '10000';
+        overlay.style.animation = 'fadeIn var(--transition-fast) ease-out forwards';
+
+        const card = document.createElement('div');
+        card.style.background = 'var(--color-surface)';
+        card.style.padding = 'var(--spacing-2xl)';
+        card.style.borderRadius = 'var(--radius-2xl)';
+        card.style.border = '2px solid var(--color-primary)';
+        card.style.boxShadow = 'var(--shadow-2xl)';
+        card.style.textAlign = 'center';
+        card.style.maxWidth = '400px';
+        card.style.width = '90%';
+        card.style.animation = 'authOverlayPop var(--transition-slow) cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+
+        card.innerHTML = `
+            <div style="font-size: 64px; margin-bottom: var(--spacing-md); line-height: 1;">🎉</div>
+            <h2 style="font-family: var(--font-display); font-size: var(--font-size-3xl); font-weight: 800; color: var(--color-primary); margin-bottom: var(--spacing-xs);">Level Up!</h2>
+            <p style="font-family: var(--font-body); color: var(--color-text-secondary); margin-bottom: var(--spacing-xl);">Congratulations! You have reached <strong>Level ${this.userLevel}</strong>.</p>
+            <button class="btn-primary" style="width: 100%;" onclick="this.parentElement.parentElement.remove()">Awesome!</button>
+        `;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        // Confetti Burst animation
+        const colors = ['#0EA5A0', '#38BDF8', '#F59E0B', '#8A2BE2', '#EF4444', '#10B981'];
+        for (let i = 0; i < 80; i++) {
+            const p = document.createElement('div');
+            p.style.position = 'fixed';
+            p.style.left = '50vw';
+            p.style.top = '50vh';
+            p.style.width = `${Math.random() * 8 + 6}px`;
+            p.style.height = `${Math.random() * 12 + 6}px`;
+            p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            p.style.zIndex = '10001';
+            p.style.borderRadius = '2px';
+
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 15 + 10;
+            const dx = Math.cos(angle) * velocity;
+            const dy = Math.sin(angle) * velocity - 4;
+
+            p.dataset.dx = dx;
+            p.dataset.dy = dy;
+            p.dataset.x = window.innerWidth / 2;
+            p.dataset.y = window.innerHeight / 2;
+            p.dataset.rotation = Math.random() * 360;
+            p.dataset.spin = Math.random() * 10 - 5;
+
+            document.body.appendChild(p);
+
+            let gravity = 0.4;
+            let opacity = 1;
+            const animate = () => {
+                let x = parseFloat(p.dataset.x) + parseFloat(p.dataset.dx);
+                let y = parseFloat(p.dataset.y) + parseFloat(p.dataset.dy);
+                let currentDy = parseFloat(p.dataset.dy) + gravity;
+                let rotation = parseFloat(p.dataset.rotation) + parseFloat(p.dataset.spin);
+
+                p.dataset.x = x;
+                p.dataset.y = y;
+                p.dataset.dy = currentDy;
+                p.dataset.rotation = rotation;
+
+                p.style.left = `${x}px`;
+                p.style.top = `${y}px`;
+                p.style.transform = `rotate(${rotation}deg)`;
+
+                opacity -= 0.015;
+                p.style.opacity = opacity;
+
+                if (opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    p.remove();
+                }
+            };
+            requestAnimationFrame(animate);
+        }
     }
 }
 

@@ -4,7 +4,8 @@
 
 class ProductivityHub {
     constructor() {
-        this.currentPage = 'habits';
+        this.currentPage = 'home';
+        this.userBadges = [];
         this.habits = this.loadData('habits') || [];
         this.tasks = this.loadData('tasks') || [];
         this.pomodoroSettings = this.loadData('pomodoroSettings') || {
@@ -35,6 +36,24 @@ class ProductivityHub {
             this.motivationalSettings.targetCount = 5;
         }
 
+        // Initialize Level and XP System
+        this.userLevel = parseInt(localStorage.getItem('userLevel')) || 1;
+        this.userXP = parseInt(localStorage.getItem('userXP')) || 0;
+
+        // Initialize XP Scaling parameters
+        this.xpConfig = {
+            habit: 50,
+            task: 30,
+            pomodoro: 150,
+            video: 40,
+            groupBonus: 200,
+            levelBase: 500
+        };
+
+        // Initialize Role-Based Access Control
+        this.userRole = null;
+        this.activeAdminTab = 'analytics';
+
         this.init();
     }
 
@@ -44,10 +63,199 @@ class ProductivityHub {
         this.setupOverlayAuthEventListeners();
         this.renderPage(this.currentPage);
         this.checkPomodoroStats();
+        this.updateXPUI();
 
         // Handle pre-initialized auth state if any
         if (window.currentUser !== undefined) {
             this.onUserStatusChanged(window.currentUser);
+        }
+    }
+
+    // ============================================
+    // GAMIFICATION AND XP SYSTEM
+    // ============================================
+
+    gainXP(amount, reason) {
+        this.userXP += amount;
+        let leveledUp = false;
+
+        while (this.userXP >= this.getXPNeededForLevel(this.userLevel)) {
+            this.userXP -= this.getXPNeededForLevel(this.userLevel);
+            this.userLevel++;
+            leveledUp = true;
+        }
+
+        // Save locally
+        localStorage.setItem('userLevel', this.userLevel);
+        localStorage.setItem('userXP', this.userXP);
+
+        // Save to Firestore if authenticated
+        if (this.currentUser && window.db && window.firestoreUtils) {
+            const { doc, setDoc } = window.firestoreUtils;
+            setDoc(doc(window.db, "users", this.currentUser.uid), {
+                userLevel: this.userLevel,
+                userXP: this.userXP
+            }, { merge: true }).catch(err => console.error("Error saving XP to firestore:", err));
+        }
+
+        this.updateXPUI();
+        this.showXPFloatingText(amount, reason);
+
+        if (leveledUp) {
+            this.showLevelUpCelebration();
+        }
+    }
+
+    getXPNeededForLevel(level) {
+        return level * (this.xpConfig ? this.xpConfig.levelBase : 500);
+    }
+
+    updateXPUI() {
+        const levelBadge = document.getElementById('globalLevelBadge');
+        const xpText = document.getElementById('globalXPText');
+        const xpBarFill = document.getElementById('globalXPBarFill');
+
+        const needed = this.getXPNeededForLevel(this.userLevel);
+        const percent = Math.min(100, Math.max(0, (this.userXP / needed) * 100));
+
+        if (levelBadge) levelBadge.textContent = `L${this.userLevel}`;
+        if (xpText) xpText.textContent = `${this.userXP} / ${needed} XP`;
+        if (xpBarFill) xpBarFill.style.width = `${percent}%`;
+    }
+
+    updateBadgeUI() {
+        const iconEl = document.getElementById('globalBadgeIcon');
+        const tooltipEl = document.getElementById('globalBadgeTooltip');
+        if (!iconEl || !tooltipEl) return;
+
+        const badge = (this.userBadges && this.userBadges.length > 0)
+            ? this.userBadges[0]
+            : "🌱 Mornigami Novice";
+
+        // Extract emoji if present at start of badge string
+        const match = badge.match(/^([\uD800-\uDBFF][\uDC00-\uDFFF]|\p{Emoji_Presentation}|\p{Emoji}\s*)?\s*(.*)$/u);
+        let emoji = "🌱";
+        if (match && match[1]) {
+            emoji = match[1].trim();
+        }
+
+        iconEl.textContent = emoji;
+        tooltipEl.textContent = badge;
+    }
+
+    showXPFloatingText(amount, reason) {
+        const badge = document.getElementById('globalLevelBadge');
+        if (!badge) return;
+
+        const rect = badge.getBoundingClientRect();
+        const floatingText = document.createElement('div');
+        floatingText.className = 'xp-floating-text';
+        floatingText.style.left = `${rect.left + rect.width / 2}px`;
+        floatingText.style.top = `${rect.top}px`;
+        floatingText.style.transform = 'translate(-50%, -100%)';
+        floatingText.style.color = 'var(--color-primary)';
+        floatingText.style.fontWeight = '800';
+        floatingText.style.fontSize = 'var(--font-size-lg)';
+        floatingText.innerHTML = `+${amount} XP <span style="font-size: var(--font-size-xs); font-weight: 500; color: var(--color-text-secondary); display: block; text-align: center;">${reason}</span>`;
+
+        document.body.appendChild(floatingText);
+
+        setTimeout(() => {
+            floatingText.remove();
+        }, 1200);
+    }
+
+    showLevelUpCelebration() {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+        overlay.style.backdropFilter = 'blur(4px)';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '10000';
+        overlay.style.animation = 'fadeIn var(--transition-fast) ease-out forwards';
+
+        const card = document.createElement('div');
+        card.style.background = 'var(--color-surface)';
+        card.style.padding = 'var(--spacing-2xl)';
+        card.style.borderRadius = 'var(--radius-2xl)';
+        card.style.border = '2px solid var(--color-primary)';
+        card.style.boxShadow = 'var(--shadow-2xl)';
+        card.style.textAlign = 'center';
+        card.style.maxWidth = '400px';
+        card.style.width = '90%';
+        card.style.animation = 'authOverlayPop var(--transition-slow) cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+
+        card.innerHTML = `
+            <div style="font-size: 64px; margin-bottom: var(--spacing-md); line-height: 1;">🎉</div>
+            <h2 style="font-family: var(--font-display); font-size: var(--font-size-3xl); font-weight: 800; color: var(--color-primary); margin-bottom: var(--spacing-xs);">Level Up!</h2>
+            <p style="font-family: var(--font-body); color: var(--color-text-secondary); margin-bottom: var(--spacing-xl);">Congratulations! You have reached <strong>Level ${this.userLevel}</strong>.</p>
+            <button class="btn-primary" style="width: 100%;" onclick="this.parentElement.parentElement.remove()">Awesome!</button>
+        `;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        // Confetti Burst animation
+        const colors = ['#0EA5A0', '#38BDF8', '#F59E0B', '#8A2BE2', '#EF4444', '#10B981'];
+        for (let i = 0; i < 80; i++) {
+            const p = document.createElement('div');
+            p.style.position = 'fixed';
+            p.style.left = '50vw';
+            p.style.top = '50vh';
+            p.style.width = `${Math.random() * 8 + 6}px`;
+            p.style.height = `${Math.random() * 12 + 6}px`;
+            p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            p.style.zIndex = '10001';
+            p.style.borderRadius = '2px';
+
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 15 + 10;
+            const dx = Math.cos(angle) * velocity;
+            const dy = Math.sin(angle) * velocity - 4;
+
+            p.dataset.dx = dx;
+            p.dataset.dy = dy;
+            p.dataset.x = window.innerWidth / 2;
+            p.dataset.y = window.innerHeight / 2;
+            p.dataset.rotation = Math.random() * 360;
+            p.dataset.spin = Math.random() * 10 - 5;
+
+            document.body.appendChild(p);
+
+            let gravity = 0.4;
+            let opacity = 1;
+            const animate = () => {
+                let x = parseFloat(p.dataset.x) + parseFloat(p.dataset.dx);
+                let y = parseFloat(p.dataset.y) + parseFloat(p.dataset.dy);
+                let currentDy = parseFloat(p.dataset.dy) + gravity;
+                let rotation = parseFloat(p.dataset.rotation) + parseFloat(p.dataset.spin);
+
+                p.dataset.x = x;
+                p.dataset.y = y;
+                p.dataset.dy = currentDy;
+                p.dataset.rotation = rotation;
+
+                p.style.left = `${x}px`;
+                p.style.top = `${y}px`;
+                p.style.transform = `rotate(${rotation}deg)`;
+
+                opacity -= 0.015;
+                p.style.opacity = opacity;
+
+                if (opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    p.remove();
+                }
+            };
+            requestAnimationFrame(animate);
         }
     }
 
@@ -259,6 +467,14 @@ class ProductivityHub {
             });
         });
 
+        const navBrand = document.getElementById('navBrand');
+        if (navBrand) {
+            navBrand.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchPage('home');
+            });
+        }
+
         // Habit Modal
         document.getElementById('closeHabitModal').addEventListener('click', () => this.closeModal('habitModal'));
         document.getElementById('cancelHabitBtn').addEventListener('click', () => this.closeModal('habitModal'));
@@ -329,11 +545,15 @@ class ProductivityHub {
         const content = document.getElementById('pageContent');
 
         switch (page) {
+            case 'home':
+                content.innerHTML = document.getElementById('homePageTemplate').innerHTML;
+                break;
             case 'habits':
                 content.innerHTML = document.getElementById('habitsPageTemplate').innerHTML;
                 this.setupHabitsEventListeners();
                 this.renderHabits();
                 this.updateHabitsStats();
+                this.renderUserChallenges();
                 break;
             case 'todo':
                 content.innerHTML = document.getElementById('todoPageTemplate').innerHTML;
@@ -389,6 +609,25 @@ class ProductivityHub {
                 }
 
                 this.setupSettingsEventListeners();
+                this.renderUserBadges();
+                break;
+            case 'admin':
+                if (this.userRole !== 'admin') {
+                    content.innerHTML = `
+                        <div class="admin-access-denied">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                <line x1="9" y1="9" x2="15" y2="15"/>
+                                <line x1="15" y1="9" x2="9" y2="15"/>
+                            </svg>
+                            <h2>Access Denied</h2>
+                            <p>You do not have permission to view the Admin Dashboard.</p>
+                        </div>`;
+                    return;
+                }
+                content.innerHTML = document.getElementById('adminPageTemplate').innerHTML;
+                this.setupAdminEventListeners();
+                this.loadAllUsers();
                 break;
         }
     }
@@ -692,17 +931,49 @@ class ProductivityHub {
     }
 
     toggleDay(habitId, dayIndex) {
+        let gained = false;
+        let earnedXP = 0;
+        let streakMsg = '';
+
         this.habits = this.habits.map(h => {
             if (h.id === habitId) {
                 const newProgress = [...h.progress];
                 newProgress[dayIndex] = !newProgress[dayIndex];
+
+                if (newProgress[dayIndex]) {
+                    gained = true;
+                    earnedXP = this.xpConfig ? this.xpConfig.habit : 50; // Daily habit checked
+
+                    // Streak calculation
+                    let consecutive = 0;
+                    let idx = dayIndex;
+                    while (idx >= 0 && newProgress[idx]) {
+                        consecutive++;
+                        idx--;
+                    }
+                    if (consecutive === 3) {
+                        earnedXP += 100;
+                        streakMsg = ' (3-day Streak Bonus!)';
+                    } else if (consecutive === 7) {
+                        earnedXP += 250;
+                        streakMsg = ' (7-day Streak Bonus!)';
+                    } else if (consecutive === 30) {
+                        earnedXP += 1000;
+                        streakMsg = ' (30-day Streak Bonus!)';
+                    }
+                }
                 return { ...h, progress: newProgress };
             }
             return h;
         });
+
         this.saveData('habits', this.habits);
         this.renderHabits();
         this.updateHabitsStats();
+
+        if (gained) {
+            this.gainXP(earnedXP, `Habit completed${streakMsg}`);
+        }
     }
 
     updateHabitsStats() {
@@ -1171,8 +1442,10 @@ class ProductivityHub {
     }
 
     toggleTask(id) {
+        let completedNow = false;
         this.tasks = this.tasks.map(t => {
             if (t.id === id) {
+                if (!t.completed) completedNow = true;
                 return { ...t, completed: !t.completed };
             }
             return t;
@@ -1180,6 +1453,10 @@ class ProductivityHub {
         this.saveData('tasks', this.tasks);
         this.renderTasks(this.currentTaskFilter);
         this.updateTodoStats();
+
+        if (completedNow) {
+            this.gainXP(this.xpConfig ? this.xpConfig.task : 30, "Task Completed");
+        }
     }
 
     editTask(id) {
@@ -1335,6 +1612,9 @@ class ProductivityHub {
             this.pomodoroStats.currentStreak++;
             this.saveData('pomodoroStats', this.pomodoroStats);
             this.updatePomodoroStats();
+
+            // Award XP
+            this.gainXP(this.xpConfig ? this.xpConfig.pomodoro : 150, "Focus Session Complete");
         }
 
         // Notify
@@ -1973,6 +2253,19 @@ class ProductivityHub {
         if (playlist) {
             const video = playlist.videos.find(v => v.id === videoId);
             if (video) {
+                // Get previously completed groups
+                playlist.groups = playlist.groups || [];
+                const previouslyCompletedGroups = playlist.groups.filter(g => {
+                    const startIdx = g.start - 1;
+                    const endIdx = g.end - 1;
+                    for (let i = startIdx; i <= endIdx; i++) {
+                        if (playlist.videos[i] && !playlist.videos[i].completed) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
                 video.completed = !video.completed;
 
                 // Track completion count for motivational popups if enabled
@@ -1995,6 +2288,31 @@ class ProductivityHub {
 
                 this.saveData('playlists', this.playlists);
                 this.renderPlaylists();
+
+                // XP awards
+                if (video.completed) {
+                    let xpGained = this.xpConfig ? this.xpConfig.video : 40; // Base XP for completed video
+                    let reason = "Video Completed";
+
+                    // Check if any new groups were completed
+                    const currentlyCompletedGroups = playlist.groups.filter(g => {
+                        const startIdx = g.start - 1;
+                        const endIdx = g.end - 1;
+                        for (let i = startIdx; i <= endIdx; i++) {
+                            if (playlist.videos[i] && !playlist.videos[i].completed) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
+
+                    if (currentlyCompletedGroups.length > previouslyCompletedGroups.length) {
+                        xpGained += this.xpConfig ? this.xpConfig.groupBonus : 200; // Bonus for learning group completion
+                        reason = "Learning Group Completed!";
+                    }
+
+                    this.gainXP(xpGained, reason);
+                }
             }
         }
     }
@@ -2643,6 +2961,8 @@ pause
         const authOverlay = document.getElementById('authOverlay');
 
         if (user) {
+            this.userBadges = [];
+            this.updateBadgeUI();
             // Hide the mandatory auth overlay with a smooth transition
             if (authOverlay) {
                 authOverlay.style.opacity = '0';
@@ -2711,6 +3031,56 @@ pause
                             localStorage.setItem('motivationalSettings', JSON.stringify(this.motivationalSettings));
                         }
 
+                        // Load Level and XP from Firestore
+                        if (data.userLevel !== undefined) {
+                            this.userLevel = data.userLevel;
+                            localStorage.setItem('userLevel', this.userLevel);
+                        }
+                        if (data.userXP !== undefined) {
+                            this.userXP = data.userXP;
+                            localStorage.setItem('userXP', this.userXP);
+                        }
+                        if (data.badges) {
+                            this.userBadges = data.badges;
+                        }
+                        this.updateXPUI();
+                        this.updateBadgeUI();
+
+                        // Load user role (RBAC)
+                        if (data.role) {
+                            this.userRole = data.role;
+                        } else {
+                            // Auto-assign: if the user has displayName 'Bishr', set as admin; otherwise default to 'user'
+                            const autoRole = (user.displayName && user.displayName.toLowerCase() === 'bishr') ? 'admin' : 'user';
+                            this.userRole = autoRole;
+                            // Persist the default role to Firestore
+                            const { doc: docRef, setDoc: setDocRef } = window.firestoreUtils;
+                            setDocRef(docRef(window.db, "users", user.uid), { role: autoRole }, { merge: true })
+                                .catch(err => console.error('Error setting default role:', err));
+                        }
+                        this.applyRoleVisibility();
+                        await this.loadGlobalSettings();
+
+                        // Log activity and set default status
+                        const { doc: docRef, setDoc: setDocRef } = window.firestoreUtils;
+                        const userRef = docRef(window.db, "users", user.uid);
+                        const updates = { 
+                            lastActive: new Date().toISOString(),
+                            email: user.email,
+                            displayName: user.displayName || user.email.split('@')[0]
+                        };
+                        if (data.status === undefined) updates.status = 'active';
+                        setDocRef(userRef, updates, { merge: true })
+                            .catch(err => console.error("Error logging user activity:", err));
+
+                        // Check lockout status
+                        if (data.status === 'suspended' || data.status === 'banned') {
+                            this.showLockoutScreen(data.status);
+                            return;
+                        } else {
+                            this.removeLockoutScreen();
+                        }
+
                         // إعادة رندر الصفحة بالبيانات الجديدة
                         this.renderPage(this.currentPage);
                     }
@@ -2737,8 +3107,15 @@ pause
             // Clear login/signup input fields and messages
             this.clearAuthInputs();
 
+            this.userBadges = [];
+            this.updateBadgeUI();
+
             // لو المستخدم سجل خروج، بنظف الـ localStorage تماماً عشان يرجع anonymous نضيف
             this.clearAllLocalData();
+
+            // Reset role
+            this.userRole = null;
+            this.applyRoleVisibility();
 
             if (loginBtn) loginBtn.style.display = 'flex';
             if (userMenuWrapper) {
@@ -2959,6 +3336,12 @@ pause
                                     promises.push(setDoc(usernameRef, { email: email, uid: user.uid }));
                                 }
                             }
+                            // Create user document with default role
+                            if (window.db && window.firestoreUtils) {
+                                const { doc, setDoc } = window.firestoreUtils;
+                                const userRef = doc(window.db, "users", user.uid);
+                                promises.push(setDoc(userRef, { role: 'user', email: email, displayName: username || '' }, { merge: true }));
+                            }
                             return Promise.all(promises).then(() => userCredential);
                         })
                         .then(handleSuccess)
@@ -3152,6 +3535,12 @@ pause
                                     promises.push(setDoc(usernameRef, { email: email, uid: user.uid }));
                                 }
                             }
+                            // Create user document with default role
+                            if (window.db && window.firestoreUtils) {
+                                const { doc, setDoc } = window.firestoreUtils;
+                                const userRef = doc(window.db, "users", user.uid);
+                                promises.push(setDoc(userRef, { role: 'user', email: email, displayName: username || '' }, { merge: true }));
+                            }
                             return Promise.all(promises).then(() => userCredential);
                         })
                         .then(handleSuccess)
@@ -3163,7 +3552,7 @@ pause
     // دالة لتصفير بيانات التطبيق بالكامل محلياً
     clearAllLocalData() {
         // 1. مسح البيانات من الـ localStorage
-        const keysToClear = ['habits', 'tasks', 'playlists', 'pomodoroStats', 'motivationalSettings'];
+        const keysToClear = ['habits', 'tasks', 'playlists', 'pomodoroStats', 'motivationalSettings', 'userLevel', 'userXP'];
         keysToClear.forEach(key => localStorage.removeItem(key));
 
         // 2. إعادة تعيين متغيرات التطبيق في الذاكرة لقيمها الافتراضية
@@ -3181,9 +3570,794 @@ pause
             streakCount: 0,
             targetCount: 5
         };
+        this.userLevel = 1;
+        this.userXP = 0;
+        this.userBadges = [];
+        this.updateXPUI();
+        this.updateBadgeUI();
 
         // 3. إعادة تحميل الصفحة المعروضة حالياً عشان تظهر فاضية
         this.renderPage(this.currentPage);
+    }
+
+    // ============================================
+    // ROLE-BASED ACCESS CONTROL (RBAC) & ADMIN
+    // ============================================
+
+    applyRoleVisibility() {
+        const adminNavLink = document.getElementById('adminNavLink');
+        if (adminNavLink) {
+            adminNavLink.style.display = this.userRole === 'admin' ? '' : 'none';
+        }
+    }
+
+    switchAdminTab(tabName) {
+        this.activeAdminTab = tabName;
+
+        // Toggle tab buttons
+        document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+            if (btn.getAttribute('data-tab') === tabName) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Toggle tab content
+        document.querySelectorAll('.admin-tab-content').forEach(content => {
+            if (content.id === `adminTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`) {
+                content.style.display = 'block';
+            } else {
+                content.style.display = 'none';
+            }
+        });
+
+        // If switching to user management or analytics, make sure we reload data
+        if (tabName === 'users' || tabName === 'analytics') {
+            this.loadAllUsers();
+        } else if (tabName === 'gamification') {
+            this.loadGamificationSetup();
+        }
+    }
+
+    setupAdminEventListeners() {
+        const backBtn = document.getElementById('adminBackBtn');
+        if (backBtn) backBtn.addEventListener('click', () => this.switchPage('habits'));
+
+        const refreshBtn = document.getElementById('adminRefreshBtn');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => {
+            this.loadAllUsers();
+            this.loadGamificationSetup();
+            this.loadGlobalSettings();
+        });
+
+        // Load correct tab content
+        this.switchAdminTab(this.activeAdminTab || 'analytics');
+    }
+
+    async loadGamificationSetup() {
+        if (!window.db || !window.firestoreUtils) return;
+        const { doc, getDoc, collection, getDocs } = window.firestoreUtils;
+
+        // Populate user award dropdown
+        const badgeSelectUser = document.getElementById('badgeTargetUser');
+        if (badgeSelectUser) {
+            try {
+                const snapshot = await getDocs(collection(window.db, "users"));
+                badgeSelectUser.innerHTML = '<option value="">-- Choose User --</option>';
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const name = data.displayName || data.username || docSnap.id;
+                    badgeSelectUser.innerHTML += `<option value="${docSnap.id}">${this.escapeHtml(name)} (${this.escapeHtml(data.email || 'No email')})</option>`;
+                });
+            } catch (err) {
+                console.error("Error loading users for badge assignment:", err);
+            }
+        }
+
+        // Fill Scaling form values from current xpConfig
+        const scaleHabit = document.getElementById('xpScaleHabit');
+        const scaleTask = document.getElementById('xpScaleTask');
+        const scalePomodoro = document.getElementById('xpScalePomodoro');
+        const scaleVideo = document.getElementById('xpScaleVideo');
+        const scaleBase = document.getElementById('xpScaleBase');
+
+        if (scaleHabit && this.xpConfig) scaleHabit.value = this.xpConfig.habit;
+        if (scaleTask && this.xpConfig) scaleTask.value = this.xpConfig.task;
+        if (scalePomodoro && this.xpConfig) scalePomodoro.value = this.xpConfig.pomodoro;
+        if (scaleVideo && this.xpConfig) scaleVideo.value = this.xpConfig.video;
+        if (scaleBase && this.xpConfig) scaleBase.value = this.xpConfig.levelBase;
+
+        // Load active challenges
+        this.loadAdminActiveChallenges();
+    }
+
+    async loadAdminActiveChallenges() {
+        const listEl = document.getElementById('adminActiveChallengesList');
+        if (!listEl || !window.db || !window.firestoreUtils) return;
+
+        try {
+            const { collection, getDocs } = window.firestoreUtils;
+            const snapshot = await getDocs(collection(window.db, "globalChallenges"));
+
+            let html = '';
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                html += `
+                    <div class="admin-challenge-card" data-id="${docSnap.id}">
+                        <div class="admin-challenge-info">
+                            <span class="admin-challenge-title">${this.escapeHtml(data.title)}</span>
+                            <span class="admin-challenge-desc">${this.escapeHtml(data.description)}</span>
+                            <span class="admin-challenge-prize">🏆 Reward: +${data.prize} XP</span>
+                        </div>
+                        <button class="btn-action-danger-sm" onclick="app.deleteGlobalChallenge('${docSnap.id}')">Delete</button>
+                    </div>`;
+            });
+
+            listEl.innerHTML = html || '<p style="color: var(--color-text-secondary); text-align: center; margin: 0; padding: var(--spacing-md);">No active platform challenges.</p>';
+        } catch (err) {
+            console.error("Error loading admin challenges:", err);
+            listEl.innerHTML = '<p style="color: var(--color-danger);">Error loading challenges.</p>';
+        }
+    }
+
+    async loadAllUsers() {
+        if (!window.db || !window.firestoreUtils) return;
+
+        const tableBody = document.getElementById('adminUserTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <div class="admin-loading">
+                    <div class="admin-loading-spinner"></div>
+                    <span>Loading users...</span>
+                </div>`;
+        }
+
+        try {
+            const { collection, getDocs } = window.firestoreUtils;
+            const usersCol = collection(window.db, "users");
+            const snapshot = await getDocs(usersCol);
+
+            const users = [];
+            let totalXP = 0;
+            let totalLevel = 0;
+            let totalAdmins = 0;
+
+            // Stats aggregations
+            let totalHabitsCount = 0;
+            let totalTasksCount = 0;
+            let totalFocusSessionsCount = 0;
+            let totalPlaylistsCount = 0;
+            let activeTodayCount = 0;
+            let activeWeekCount = 0;
+
+            const now = new Date();
+            const oneDayMs = 24 * 60 * 60 * 1000;
+            const sevenDaysMs = 7 * oneDayMs;
+
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const u = {
+                    uid: docSnap.id,
+                    displayName: data.displayName || data.username || '',
+                    email: data.email || '',
+                    role: data.role || 'user',
+                    userLevel: data.userLevel || 1,
+                    userXP: data.userXP || 0,
+                    status: data.status || 'active',
+                    profilePicUrl: data.profilePicUrl || '',
+                    lastActive: data.lastActive || '',
+                    habits: data.habits || [],
+                    tasks: data.tasks || [],
+                    pomodoroStats: data.pomodoroStats || { sessionsToday: 0 },
+                    playlists: data.playlists || [],
+                    badges: data.badges || []
+                };
+
+                users.push(u);
+
+                totalLevel += u.userLevel;
+                totalXP += u.userXP;
+                if (u.role === 'admin') totalAdmins++;
+
+                totalHabitsCount += u.habits.length;
+                totalTasksCount += u.tasks.length;
+                totalFocusSessionsCount += (u.pomodoroStats.sessionsToday || 0);
+                totalPlaylistsCount += u.playlists.length;
+
+                if (u.lastActive) {
+                    const lastActiveDate = new Date(u.lastActive);
+                    const diff = now - lastActiveDate;
+                    if (diff <= oneDayMs) activeTodayCount++;
+                    if (diff <= sevenDaysMs) activeWeekCount++;
+                }
+            });
+
+            // Update KPI elements
+            const totalUsersEl = document.getElementById('adminTotalUsers');
+            const totalAdminsEl = document.getElementById('adminTotalAdmins');
+            const avgLevelEl = document.getElementById('adminAvgLevel');
+            const activeTodayEl = document.getElementById('adminActiveUsersToday');
+            const activeWeekEl = document.getElementById('adminActiveUsersWeek');
+
+            if (totalUsersEl) totalUsersEl.textContent = users.length;
+            if (totalAdminsEl) totalAdminsEl.textContent = totalAdmins;
+            if (avgLevelEl) {
+                const avg = users.length > 0 ? (totalLevel / users.length).toFixed(1) : '—';
+                avgLevelEl.textContent = avg;
+            }
+            if (activeTodayEl) activeTodayEl.textContent = activeTodayCount;
+            if (activeWeekEl) activeWeekEl.textContent = activeWeekCount;
+
+            // Breakdown Stats
+            const habitsCountEl = document.getElementById('adminTotalHabits');
+            const tasksCountEl = document.getElementById('adminTotalTasks');
+            const focusSessionsCountEl = document.getElementById('adminTotalFocusSessions');
+            const playlistsCountEl = document.getElementById('adminTotalPlaylists');
+
+            if (habitsCountEl) habitsCountEl.textContent = totalHabitsCount;
+            if (tasksCountEl) habitsCountEl.textContent = totalTasksCount;
+            if (focusSessionsCountEl) focusSessionsCountEl.textContent = totalFocusSessionsCount;
+            if (playlistsCountEl) playlistsCountEl.textContent = totalPlaylistsCount;
+
+            this.renderAdminUserTable(users);
+        } catch (err) {
+            console.error("Error loading users for admin:", err);
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <div class="admin-loading" style="color: var(--color-danger);">
+                        <span>Failed to load users. Please check your credentials or network.</span>
+                    </div>`;
+            }
+        }
+    }
+
+    renderAdminUserTable(users) {
+        const tableBody = document.getElementById('adminUserTableBody');
+        if (!tableBody) return;
+
+        if (users.length === 0) {
+            tableBody.innerHTML = `
+                <div class="admin-loading">
+                    <span>No registered users found.</span>
+                </div>`;
+            return;
+        }
+
+        const currentUid = this.currentUser ? this.currentUser.uid : null;
+
+        tableBody.innerHTML = users.map(user => {
+            const initial = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+            const avatarHTML = user.profilePicUrl
+                ? `<img src="${this.escapeHtml(user.profilePicUrl)}" alt="${this.escapeHtml(user.displayName)}">`
+                : `<span class="admin-user-avatar-fallback">${initial}</span>`;
+
+            const isCurrentUser = user.uid === currentUid;
+            const rowClass = isCurrentUser ? 'admin-user-row is-current-user' : 'admin-user-row';
+            const roleDisabled = isCurrentUser ? 'disabled' : '';
+            const statusDisabled = isCurrentUser ? 'disabled' : '';
+
+            // Format last active date
+            let lastActiveStr = 'Never active';
+            if (user.lastActive) {
+                lastActiveStr = new Date(user.lastActive).toLocaleString();
+            }
+
+            // Badges string
+            const badgesStr = user.badges.length > 0 ? user.badges.join(', ') : 'None';
+
+            return `
+                <div class="${rowClass}" data-uid="${user.uid}" data-status="${user.status}">
+                    <div class="admin-user-avatar">${avatarHTML}</div>
+                    <div class="admin-user-info">
+                        <div class="admin-user-name" style="font-weight: 700;">${this.escapeHtml(user.displayName || 'No Name')}${isCurrentUser ? ' <span style="font-size: 10px; color: var(--color-primary); font-weight: 600;">(You)</span>' : ''}</div>
+                        <div class="admin-user-email">${this.escapeHtml(user.email || 'N/A')}</div>
+                    </div>
+                    <div>
+                        <label class="admin-col-label">Role</label>
+                        <select class="admin-role-select" data-field="role" ${roleDisabled}>
+                            <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
+                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="admin-col-label">Level</label>
+                        <input type="number" class="admin-input" data-field="level" value="${user.userLevel}" min="1">
+                    </div>
+                    <div>
+                        <label class="admin-col-label">XP</label>
+                        <input type="number" class="admin-input" data-field="xp" value="${user.userXP}" min="0">
+                    </div>
+                    <div>
+                        <label class="admin-col-label">Status</label>
+                        <select class="admin-role-select" data-field="status" ${statusDisabled} style="text-transform: capitalize;">
+                            <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
+                            <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                            <option value="banned" ${user.status === 'banned' ? 'selected' : ''}>Banned</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 4px; align-self: end;">
+                        <button class="admin-save-btn" onclick="app.saveUserData('${user.uid}')">Save</button>
+                        <button class="btn-action-sm" onclick="app.toggleActivityLog('${user.uid}')" title="Activity Logs">📝 Logs</button>
+                        <button class="btn-action-sm" onclick="app.sendAdminPasswordReset('${user.email}')" title="Password Reset">🔑 Reset</button>
+                        <button class="btn-action-danger-sm" ${isCurrentUser ? 'disabled' : ''} onclick="app.deleteUserAccount('${user.uid}')" title="Delete User">🗑️ Delete</button>
+                    </div>
+
+                    <!-- Collapsible Activity Panel -->
+                    <div id="activityLog-${user.uid}" class="admin-activity-panel">
+                        <h4 style="margin: 0 0 10px 0; font-family: var(--font-display); font-size: var(--font-size-sm); color: var(--color-primary);">User Activity Log & Stats</h4>
+                        <div class="admin-activity-grid">
+                            <div class="activity-stat-card">
+                                <div class="activity-stat-title">Last Login Timestamp</div>
+                                <div class="activity-stat-value" style="font-size: var(--font-size-xs);">${lastActiveStr}</div>
+                            </div>
+                            <div class="activity-stat-card">
+                                <div class="activity-stat-title">Habits Configured</div>
+                                <div class="activity-stat-value">${user.habits.length}</div>
+                            </div>
+                            <div class="activity-stat-card">
+                                <div class="activity-stat-title">To-Do Tasks</div>
+                                <div class="activity-stat-value">${user.tasks.length}</div>
+                            </div>
+                            <div class="activity-stat-card">
+                                <div class="activity-stat-title">Badges Awarded</div>
+                                <div class="activity-stat-value" style="font-size: var(--font-size-xs); white-space: normal; line-height: 1.4;">${badgesStr}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    toggleActivityLog(uid) {
+        const panel = document.getElementById(`activityLog-${uid}`);
+        if (panel) {
+            panel.classList.toggle('show');
+        }
+    }
+
+    filterUserTable() {
+        const searchQuery = document.getElementById('adminUserSearch').value.toLowerCase().trim();
+        const statusFilter = document.getElementById('adminUserStatusFilter').value;
+
+        document.querySelectorAll('.admin-user-row').forEach(row => {
+            const name = row.querySelector('.admin-user-name').textContent.toLowerCase();
+            const email = row.querySelector('.admin-user-email').textContent.toLowerCase();
+            const uid = row.getAttribute('data-uid').toLowerCase();
+            const status = row.getAttribute('data-status');
+
+            const matchesSearch = name.includes(searchQuery) || email.includes(searchQuery) || uid.includes(searchQuery);
+            const matchesStatus = statusFilter === 'all' || status === statusFilter;
+
+            if (matchesSearch && matchesStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    async saveUserData(uid) {
+        if (!window.db || !window.firestoreUtils) return;
+
+        const row = document.querySelector(`.admin-user-row[data-uid="${uid}"]`);
+        if (!row) return;
+
+        const roleSelect = row.querySelector('[data-field="role"]');
+        const statusSelect = row.querySelector('[data-field="status"]');
+        const levelInput = row.querySelector('[data-field="level"]');
+        const xpInput = row.querySelector('[data-field="xp"]');
+        const saveBtn = row.querySelector('.admin-save-btn');
+
+        const newRole = roleSelect ? roleSelect.value : 'user';
+        const newStatus = statusSelect ? statusSelect.value : 'active';
+        const newLevel = levelInput ? Math.max(1, parseInt(levelInput.value) || 1) : 1;
+        const newXP = xpInput ? Math.max(0, parseInt(xpInput.value) || 0) : 0;
+
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+        }
+
+        try {
+            const { doc, setDoc } = window.firestoreUtils;
+            const userRef = doc(window.db, "users", uid);
+            await setDoc(userRef, {
+                role: newRole,
+                status: newStatus,
+                userLevel: newLevel,
+                userXP: newXP
+            }, { merge: true });
+
+            // Update row dataset status for filters
+            row.setAttribute('data-status', newStatus);
+
+            // If editing current admin
+            if (this.currentUser && uid === this.currentUser.uid) {
+                this.userLevel = newLevel;
+                this.userXP = newXP;
+                localStorage.setItem('userLevel', newLevel);
+                localStorage.setItem('userXP', newXP);
+                this.updateXPUI();
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'admin-save-toast';
+            toast.textContent = '✓ Saved';
+            row.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        } catch (err) {
+            console.error("Error saving user data:", err);
+            alert("Failed to save user data.");
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            }
+        }
+    }
+
+    async deleteUserAccount(uid) {
+        if (!window.db || !window.firestoreUtils) return;
+        if (!confirm("⚠️ WARNING: Are you sure you want to permanently delete this user document? This action is irreversible.")) return;
+
+        try {
+            const { doc, deleteDoc } = window.firestoreUtils;
+            await deleteDoc(doc(window.db, "users", uid));
+            alert("User document successfully deleted.");
+            this.loadAllUsers();
+        } catch (err) {
+            console.error("Error deleting user document:", err);
+            alert("Failed to delete user document.");
+        }
+    }
+
+    async sendAdminPasswordReset(email) {
+        if (!email) return;
+        if (!window.firebaseAuth || !window.auth) return;
+
+        try {
+            await window.firebaseAuth.sendPasswordResetEmail(window.auth, email);
+            alert(`Password reset link successfully broadcasted to ${email}!`);
+        } catch (err) {
+            console.error("Error broadcasting password reset email:", err);
+            alert(`Failed to send password reset: ${err.message}`);
+        }
+    }
+
+    async saveXPScalingSettings(e) {
+        if (e) e.preventDefault();
+        if (!window.db || !window.firestoreUtils) return;
+
+        const habitVal = parseInt(document.getElementById('xpScaleHabit').value) || 50;
+        const taskVal = parseInt(document.getElementById('xpScaleTask').value) || 30;
+        const pomodoroVal = parseInt(document.getElementById('xpScalePomodoro').value) || 150;
+        const videoVal = parseInt(document.getElementById('xpScaleVideo').value) || 40;
+        const baseVal = parseInt(document.getElementById('xpScaleBase').value) || 500;
+
+        try {
+            const { doc, setDoc } = window.firestoreUtils;
+            await setDoc(doc(window.db, "settings", "gamification"), {
+                habit: habitVal,
+                task: taskVal,
+                pomodoro: pomodoroVal,
+                video: videoVal,
+                groupBonus: 200,
+                levelBase: baseVal
+            }, { merge: true });
+
+            alert("Dynamic XP Scaling configurations updated globally!");
+            await this.loadGlobalSettings();
+        } catch (err) {
+            console.error("Error saving dynamic XP scaling settings:", err);
+            alert("Failed to save scaling configurations.");
+        }
+    }
+
+    async createGlobalChallenge(e) {
+        if (e) e.preventDefault();
+        if (!window.db || !window.firestoreUtils) return;
+
+        const title = document.getElementById('challengeTitle').value;
+        const description = document.getElementById('challengeDesc').value;
+        const target = parseInt(document.getElementById('challengeTarget').value) || 5;
+        const prize = parseInt(document.getElementById('challengePrize').value) || 500;
+
+        try {
+            const { doc, setDoc } = window.firestoreUtils;
+            const challengeId = "challenge_" + Date.now();
+            await setDoc(doc(window.db, "globalChallenges", challengeId), {
+                title,
+                description,
+                target,
+                prize,
+                created: new Date().toISOString()
+            });
+
+            alert("Global challenge published successfully!");
+            document.getElementById('adminChallengeForm').reset();
+            this.loadAdminActiveChallenges();
+        } catch (err) {
+            console.error("Error creating global challenge:", err);
+            alert("Failed to publish global challenge.");
+        }
+    }
+
+    async deleteGlobalChallenge(challengeId) {
+        if (!window.db || !window.firestoreUtils) return;
+        if (!confirm("Are you sure you want to delete this global challenge?")) return;
+
+        try {
+            const { doc, deleteDoc } = window.firestoreUtils;
+            await deleteDoc(doc(window.db, "globalChallenges", challengeId));
+            this.loadAdminActiveChallenges();
+        } catch (err) {
+            console.error("Error deleting global challenge:", err);
+            alert("Failed to delete challenge.");
+        }
+    }
+
+    async awardBadgeToUser(e) {
+        if (e) e.preventDefault();
+        if (!window.db || !window.firestoreUtils) return;
+
+        const uid = document.getElementById('badgeTargetUser').value;
+        const badge = document.getElementById('badgeName').value;
+
+        if (!uid) {
+            alert("Please choose a user to award.");
+            return;
+        }
+
+        try {
+            const { doc, getDoc, setDoc } = window.firestoreUtils;
+            const userRef = doc(window.db, "users", uid);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const userBadges = userData.badges || [];
+
+                if (userBadges.includes(badge)) {
+                    alert("This user already owns this badge!");
+                    return;
+                }
+
+                userBadges.push(badge);
+                await setDoc(userRef, { badges: userBadges }, { merge: true });
+                if (uid === this.currentUser.uid) {
+                    this.userBadges = userBadges;
+                    this.updateBadgeUI();
+                }
+                alert(`Successfully awarded ${badge} achievement!`);
+                document.getElementById('adminBadgeForm').reset();
+            }
+        } catch (err) {
+            console.error("Error awarding badge:", err);
+            alert("Failed to award badge.");
+        }
+    }
+
+    async publishAnnouncement(e) {
+        if (e) e.preventDefault();
+        if (!window.db || !window.firestoreUtils) return;
+
+        const text = document.getElementById('announcementInputText').value;
+        const type = document.getElementById('announcementStyleType').value;
+        const active = document.getElementById('announcementIsActive').checked;
+
+        try {
+            const { doc, setDoc } = window.firestoreUtils;
+            await setDoc(doc(window.db, "settings", "announcements"), {
+                text,
+                type,
+                active,
+                publishedAt: new Date().toISOString()
+            }, { merge: true });
+
+            alert("System-wide announcement published!");
+            await this.loadGlobalSettings();
+        } catch (err) {
+            console.error("Error publishing announcement:", err);
+            alert("Failed to broadcast announcement.");
+        }
+    }
+
+    showLockoutScreen(status) {
+        let lockoutOverlay = document.getElementById('userLockoutScreenOverlay');
+        if (!lockoutOverlay) {
+            lockoutOverlay = document.createElement('div');
+            lockoutOverlay.id = 'userLockoutScreenOverlay';
+            lockoutOverlay.className = 'lockout-overlay';
+            document.body.appendChild(lockoutOverlay);
+        }
+
+        const msg = status === 'banned'
+            ? 'This account has been permanently BANNED due to a violation of Mornigami platform guidelines.'
+            : 'This account has been temporarily SUSPENDED by the platform administrator.';
+
+        lockoutOverlay.innerHTML = `
+            <div class="lockout-card">
+                <div class="lockout-icon">🛡️</div>
+                <div class="lockout-title">Account Restricted</div>
+                <div class="lockout-desc">${msg} Please contact system administration for details.</div>
+                <button class="btn-primary" style="width: 100%;" onclick="app.handleLockoutLogout()">Sign Out</button>
+            </div>`;
+    }
+
+    removeLockoutScreen() {
+        const overlay = document.getElementById('userLockoutScreenOverlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
+    handleLockoutLogout() {
+        this.removeLockoutScreen();
+        if (window.firebaseAuth && window.auth) {
+            window.firebaseAuth.signOut(window.auth)
+                .then(() => {
+                    this.switchPage('habits');
+                })
+                .catch(err => console.error("Lockout signout error:", err));
+        }
+    }
+
+    closeAnnouncement() {
+        const banner = document.getElementById('globalAnnouncementBanner');
+        if (banner) {
+            banner.style.display = 'none';
+        }
+    }
+
+    async renderUserBadges() {
+        const showcaseCard = document.getElementById('userBadgesShowcaseCard');
+        const container = document.getElementById('userBadgesContainer');
+        if (!container || !this.currentUser || !window.db || !window.firestoreUtils) return;
+
+        try {
+            const { doc, getDoc } = window.firestoreUtils;
+            const snap = await getDoc(doc(window.db, "users", this.currentUser.uid));
+            if (snap.exists()) {
+                const data = snap.data();
+                const badges = data.badges || [];
+                if (badges.length > 0) {
+                    if (showcaseCard) showcaseCard.style.display = 'block';
+                    container.innerHTML = badges.map(b => `
+                        <div class="badge-item-pill">
+                            <span>${this.escapeHtml(b)}</span>
+                        </div>`).join('');
+                } else {
+                    if (showcaseCard) showcaseCard.style.display = 'none';
+                }
+            }
+        } catch (err) {
+            console.error("Error loading user badges showcase:", err);
+        }
+    }
+
+    async renderUserChallenges() {
+        const container = document.getElementById('globalChallengesContainer');
+        const listEl = document.getElementById('globalChallengesList');
+        if (!listEl || !window.db || !window.firestoreUtils || !this.currentUser) return;
+
+        try {
+            const { collection, getDocs, doc, getDoc } = window.firestoreUtils;
+
+            // Get user level progression to check completed challenges
+            const userSnap = await getDoc(doc(window.db, "users", this.currentUser.uid));
+            const userData = userSnap.data() || {};
+            const completedChallenges = userData.completedChallenges || [];
+
+            const snapshot = await getDocs(collection(window.db, "globalChallenges"));
+            let html = '';
+            let count = 0;
+
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const challengeId = docSnap.id;
+
+                if (completedChallenges.includes(challengeId)) {
+                    return;
+                }
+
+                count++;
+                html += `
+                    <div class="user-challenge-card" data-challenge-id="${challengeId}">
+                        <div class="user-challenge-details">
+                            <div class="user-challenge-header">
+                                <span class="user-challenge-title">${this.escapeHtml(data.title)}</span>
+                                <span class="user-challenge-reward">+${data.prize} XP</span>
+                            </div>
+                            <div class="user-challenge-desc">${this.escapeHtml(data.description)}</div>
+                        </div>
+                        <button class="user-challenge-complete-btn" onclick="app.claimChallengeReward('${challengeId}', ${data.prize})">Claim</button>
+                    </div>`;
+            });
+
+            if (count > 0) {
+                if (container) container.style.display = 'block';
+                listEl.innerHTML = html;
+            } else {
+                if (container) container.style.display = 'none';
+            }
+        } catch (err) {
+            console.error("Error loading global challenges for user:", err);
+        }
+    }
+
+    async claimChallengeReward(challengeId, prizeXP) {
+        if (!this.currentUser || !window.db || !window.firestoreUtils) return;
+
+        try {
+            const { doc, getDoc, setDoc } = window.firestoreUtils;
+            const userRef = doc(window.db, "users", this.currentUser.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const completed = userData.completedChallenges || [];
+
+                if (completed.includes(challengeId)) return;
+                completed.push(challengeId);
+
+                await setDoc(userRef, { completedChallenges: completed }, { merge: true });
+
+                // Award XP
+                this.gainXP(prizeXP, "Platform Challenge Completed!");
+
+                // Refresh challenges list
+                this.renderUserChallenges();
+            }
+        } catch (err) {
+            console.error("Error claiming challenge reward:", err);
+            alert("Failed to claim challenge reward.");
+        }
+    }
+
+    async loadGlobalSettings() {
+        if (!window.db || !window.firestoreUtils) return;
+        const { doc, getDoc } = window.firestoreUtils;
+
+        // 1. Load XP Scaling Settings
+        try {
+            const snap = await getDoc(doc(window.db, "settings", "gamification"));
+            if (snap.exists()) {
+                const data = snap.data();
+                this.xpConfig = {
+                    habit: data.habit || 50,
+                    task: data.task || 30,
+                    pomodoro: data.pomodoro || 150,
+                    video: data.video || 40,
+                    groupBonus: data.groupBonus || 200,
+                    levelBase: data.levelBase || 500
+                };
+                this.updateXPUI();
+            }
+        } catch (err) {
+            console.error("Error loading scaling settings:", err);
+        }
+
+        // 2. Load System-Wide Announcement
+        try {
+            const snap = await getDoc(doc(window.db, "settings", "announcements"));
+            if (snap.exists()) {
+                const data = snap.data();
+                const banner = document.getElementById('globalAnnouncementBanner');
+                const bannerText = document.getElementById('announcementText');
+                if (data.active && data.text) {
+                    if (banner && bannerText) {
+                        bannerText.textContent = data.text;
+                        banner.className = `announcement-banner banner-${data.type || 'info'}`;
+                        banner.style.display = 'flex';
+                    }
+                } else {
+                    if (banner) banner.style.display = 'none';
+                }
+            }
+        } catch (err) {
+            console.error("Error loading system announcements:", err);
+        }
     }
 
     // ============================================

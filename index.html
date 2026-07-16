@@ -20,7 +20,7 @@
     <!-- Navigation Bar -->
     <nav class="main-nav">
         <div class="nav-content">
-            <div class="nav-brand">
+            <div class="nav-brand" id="navBrand" style="cursor: pointer;">
                 <div class="brand-icon">
                     <img src="icon.png" alt="Mornigami Logo" style="width: 48px; height: 48px; object-fit: contain;">
                 </div>
@@ -37,6 +37,31 @@
                 <a href="#" class="nav-link" data-page="todo">To-Do List</a>
                 <a href="#" class="nav-link" data-page="pomodoro">Pomodoro</a>
                 <a href="#" class="nav-link" data-page="playlist">Playlist</a>
+                <a href="#" class="nav-link" data-page="admin" id="adminNavLink" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>Admin
+                </a>
+            </div>
+            <!-- XP Progress Bar Widget -->
+            <div class="xp-nav-widget" id="xpNavWidget"
+                title="XP Progress (Earn XP by completing habits, tasks, focus sessions, and videos)">
+                <div class="xp-level-badge" id="globalLevelBadge">L1</div>
+                <div class="global-badge-wrapper" id="globalBadgeWrapper">
+                    <div class="global-badge-icon" id="globalBadgeIcon">🌱</div>
+                    <div class="global-badge-tooltip" id="globalBadgeTooltip">🌱 Mornigami Novice</div>
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--color-text-secondary); line-height: 1;">
+                        <span>XP Progress</span>
+                        <span id="globalXPText">0 / 500 XP</span>
+                    </div>
+                    <div class="xp-progress-bar-container">
+                        <div class="xp-progress-bar-fill" id="globalXPBarFill"></div>
+                    </div>
+                </div>
             </div>
             <div class="nav-actions" style="display: flex; gap: var(--spacing-sm); align-items: center;">
                 <div class="accent-picker-wrapper" style="position: relative; display: flex; align-items: center;">
@@ -114,7 +139,8 @@
 
         <!-- Auth Form Section (Hidden by default) -->
         <div id="authOverlayCard" class="auth-overlay-card" style="display: none;">
-            <div class="auth-header-actions" style="position: absolute; top: var(--spacing-md); right: var(--spacing-md); display: flex; gap: var(--spacing-xs); align-items: center;">
+            <div class="auth-header-actions"
+                style="position: absolute; top: var(--spacing-md); right: var(--spacing-md); display: flex; gap: var(--spacing-xs); align-items: center;">
                 <!-- Accent Color Picker -->
                 <div class="accent-picker-wrapper" style="position: relative; display: flex; align-items: center;">
                     <button class="btn-icon" id="overlayAccentColorBtn" title="Change accent color" type="button">
@@ -574,6 +600,76 @@
     </div>
 
     <!-- Page Templates -->
+    <template id="homePageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Mornigami Dashboard</h1>
+                    <p class="brand-subtitle">Shape your morning and fold your habits into structure.</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Welcome Hero Widget -->
+            <section class="welcome-hero-card">
+                <div class="welcome-hero-content">
+                    <h2 class="welcome-hero-title">Good morning! Ready to shape your day?</h2>
+                    <p class="welcome-hero-desc">Every habit folded, task completed, and timer run brings you closer to
+                        your goals. Unfold your potential crease by crease.</p>
+                </div>
+                <div class="welcome-hero-sun">☀️</div>
+            </section>
+
+            <!-- Portals Grid -->
+            <section class="portals-grid">
+                <!-- Habit Tracker Card -->
+                <div class="portal-card habits" onclick="app.switchPage('habits')">
+                    <div class="portal-icon-wrapper habits">📅</div>
+                    <div class="portal-card-body">
+                        <h3 class="portal-card-title">Habit Tracker</h3>
+                        <p class="portal-card-desc">Crease your routines, track consistency, and fold daily micro-habits
+                            into structure.</p>
+                    </div>
+                    <div class="portal-card-footer habits">Open Habit Folds →</div>
+                </div>
+
+                <!-- To-Do List Card -->
+                <div class="portal-card todo" onclick="app.switchPage('todo')">
+                    <div class="portal-icon-wrapper todo">📋</div>
+                    <div class="portal-card-body">
+                        <h3 class="portal-card-title">To-Do List</h3>
+                        <p class="portal-card-desc">Break your morning down into task creases. Track and prioritize
+                            essential checklists.</p>
+                    </div>
+                    <div class="portal-card-footer todo">Open Task Creases →</div>
+                </div>
+
+                <!-- Pomodoro Timer Card -->
+                <div class="portal-card pomodoro" onclick="app.switchPage('pomodoro')">
+                    <div class="portal-icon-wrapper pomodoro">🍅</div>
+                    <div class="portal-card-body">
+                        <h3 class="portal-card-title">Pomogami</h3>
+                        <p class="portal-card-desc">Shape your focus blocks, creasing distractions away. Run focus
+                            sessions and break intervals.</p>
+                    </div>
+                    <div class="portal-card-footer pomodoro">Start Focus Timer →</div>
+                </div>
+
+                <!-- Playlist Tracker Card -->
+                <div class="portal-card playlist" onclick="app.switchPage('playlist')">
+                    <div class="portal-icon-wrapper playlist">▶</div>
+                    <div class="portal-card-body">
+                        <h3 class="portal-card-title">Playlist Tracker</h3>
+                        <p class="portal-card-desc">Import course playlists, watch lessons, track video duration
+                            milestones, and level up.</p>
+                    </div>
+                    <div class="portal-card-footer playlist">Explore Playlists →</div>
+                </div>
+            </section>
+        </main>
+    </template>
+
     <template id="habitsPageTemplate">
         <header class="app-header">
             <div class="header-content">
@@ -806,7 +902,7 @@
         <header class="app-header">
             <div class="header-content">
                 <div class="brand-text">
-                    <h1 class="brand-title">Focus Origami</h1>
+                    <h1 class="brand-title">Pomogami</h1>
                     <p class="brand-subtitle">Shape your focus time, creasing distractions away.</p>
                 </div>
             </div>
@@ -911,7 +1007,7 @@
         <header class="app-header">
             <div class="header-content">
                 <div class="brand-text">
-                    <h1 class="brand-title">Origami Playlists</h1>
+                    <h1 class="brand-title">Playlist Tracker</h1>
                     <p class="brand-subtitle">Unfold focus tracks to flow with your morning folding.</p>
                 </div>
                 <div class="header-actions" style="display: flex; gap: var(--spacing-md); align-items: center;">
@@ -969,7 +1065,8 @@
 
     <template id="authPageTemplate">
         <div class="auth-container">
-            <div class="auth-header-actions" style="position: absolute; top: var(--spacing-md); right: var(--spacing-md); display: flex; gap: var(--spacing-xs); align-items: center;">
+            <div class="auth-header-actions"
+                style="position: absolute; top: var(--spacing-md); right: var(--spacing-md); display: flex; gap: var(--spacing-xs); align-items: center;">
                 <!-- Accent Color Picker -->
                 <div class="accent-picker-wrapper" style="position: relative; display: flex; align-items: center;">
                     <button class="btn-icon" id="pageAccentColorBtn" title="Change accent color" type="button">
@@ -1206,6 +1303,980 @@
         </main>
     </template>
 
+    <!-- Main Container -->
+    <div class="app-container">
+        <!-- System Announcement Banner -->
+        <div id="globalAnnouncementBanner" class="announcement-banner" style="display: none;">
+            <div class="announcement-content-wrap">
+                <span class="announcement-icon">📢</span>
+                <span id="announcementText" class="announcement-text">Welcome to Mornigami!</span>
+            </div>
+            <button class="announcement-close" onclick="app.closeAnnouncement()">&times;</button>
+        </div>
+        <!-- Dynamic Content Container -->
+        <div id="pageContent"></div>
+    </div>
+
+    <!-- Habit Modal -->
+    <div id="habitModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-container">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="habitModalTitle">Create New Habit</h2>
+                    <button class="modal-close" id="closeHabitModal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg></button>
+                </div>
+                <form id="habitForm">
+                    <div class="form-group">
+                        <label for="habitName">Habit Name</label>
+                        <input type="text" id="habitName" required placeholder="e.g., Drink water">
+                    </div>
+                    <div class="form-group">
+                        <label for="habitCategory">Category</label>
+                        <select id="habitCategory">
+                            <option value="Health">Health</option>
+                            <option value="Mind">Mind</option>
+                            <option value="Work">Work</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="habitFrequency">Frequency</label>
+                        <select id="habitFrequency">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="cancelHabitBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">Create Habit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-container">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="taskModalTitle">Create New Task</h2>
+                    <button class="modal-close" id="closeTaskModal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg></button>
+                </div>
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    <div class="form-group">
+                        <label for="taskTitle">Task Title</label>
+                        <input type="text" id="taskTitle" required placeholder="e.g., Read a book">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskDesc">Description</label>
+                        <textarea id="taskDesc" placeholder="e.g., Read 10 pages of a book"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskPriority">Priority</label>
+                        <select id="taskPriority">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="cancelTaskBtn">Cancel</button>
+                        <button type="submit" class="btn-primary" id="taskSubmitBtnText">Create Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pomodoro Settings Modal -->
+    <div id="pomodoroModal" class="modal">
+        <div class="modal-backdrop" onclick="app.closeModal('pomodoroModal')"></div>
+        <div class="modal-container">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Pomodoro Settings</h2>
+                    <button class="modal-close" onclick="app.closeModal('pomodoroModal')">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg></button>
+                </div>
+                <form id="pomodoroSettingsForm">
+                    <div class="form-group">
+                        <label for="workDuration">Work Duration (Minutes)</label>
+                        <input type="number" id="workDuration" required min="1" max="60" value="25">
+                    </div>
+                    <div class="form-group">
+                        <label for="shortBreakDuration">Short Break Duration (Minutes)</label>
+                        <input type="number" id="shortBreakDuration" required min="1" max="30" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="longBreakDuration">Long Break Duration (Minutes)</label>
+                        <input type="number" id="longBreakDuration" required min="1" max="60" value="15">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary"
+                            onclick="app.closeModal('pomodoroModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-backdrop" onclick="app.closeModal('editProfileModal')"></div>
+        <div class="modal-container">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Edit Profile</h2>
+                    <button class="modal-close" onclick="app.closeModal('editProfileModal')">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg></button>
+                </div>
+                <form id="editProfileForm">
+                    <div class="form-group">
+                        <label for="profileUsername">Username</label>
+                        <input type="text" id="profileUsername" required placeholder="New username">
+                    </div>
+                    <div class="form-group">
+                        <label for="profilePicInput">Profile Picture URL</label>
+                        <input type="url" id="profilePicInput" placeholder="https://example.com/image.jpg">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary"
+                            onclick="app.closeModal('editProfileModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Habits Tab Templates -->
+    <template id="habitsPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Habit Tracker</h1>
+                    <p class="brand-subtitle">Fold structure into your daily habits</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" id="addHabitBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        <span>Add Habit</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Global Challenges Widget for Normal Users -->
+            <div class="challenges-section" id="globalChallengesContainer"
+                style="display: none; margin-bottom: var(--spacing-lg);">
+                <div class="challenges-header"
+                    style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);">
+                    <span style="font-size: 1.25rem;">🏆</span>
+                    <h3
+                        style="margin: 0; font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700;">
+                        Active Platform Challenges</h3>
+                </div>
+                <div class="challenges-list" id="globalChallengesList"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-sm);">
+                    <!-- Dynamic Challenges -->
+                </div>
+            </div>
+
+            <div class="habits-stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="habitsCompletedToday">0</div>
+                    <div class="stat-label">Completed Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="habitsCompletionRate">0%</div>
+                    <div class="stat-label">Completion Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="habitsBestStreak">0</div>
+                    <div class="stat-label">Best Streak</div>
+                </div>
+            </div>
+
+            <div class="habits-grid" id="habitsList">
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Loading your habits...</p>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <!-- To-Do Tab Templates -->
+    <template id="todoPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">To-Do List</h1>
+                    <p class="brand-subtitle">Manage your daily tasks efficiently</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" onclick="app.openModal('taskModal')">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        <span>Add Task</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <div class="todo-stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="todoPendingCount">0</div>
+                    <div class="stat-label">Pending Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="todoCompletedCount">0</div>
+                    <div class="stat-label">Completed Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="todoCompletionRate">0%</div>
+                    <div class="stat-label">Completion Rate</div>
+                </div>
+            </div>
+
+            <div class="todo-layout">
+                <div class="todo-filters">
+                    <button class="filter-btn active" data-filter="pending"
+                        onclick="app.handleTaskFilter(event)">Pending</button>
+                    <button class="filter-btn" data-filter="completed"
+                        onclick="app.handleTaskFilter(event)">Completed</button>
+                    <button class="filter-btn" data-filter="all" onclick="app.handleTaskFilter(event)">All</button>
+                </div>
+
+                <div class="todo-list" id="tasksList">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading your tasks...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <!-- Pomodoro Tab Templates -->
+    <template id="pomodoroPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Pomodoro Timer</h1>
+                    <p class="brand-subtitle">Focus on your goals using interval training</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-secondary" onclick="app.openModal('pomodoroModal')">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <div class="pomodoro-stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="pomodoroSessionsToday">0</div>
+                    <div class="stat-label">Sessions Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pomodoroTotalTime">0m</div>
+                    <div class="stat-label">Total Focus Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pomodoroStreak">0</div>
+                    <div class="stat-label">Daily Streak</div>
+                </div>
+            </div>
+
+            <div class="pomodoro-layout">
+                <div class="timer-container">
+                    <div class="timer-modes">
+                        <button class="mode-btn active" id="modeWork">Work</button>
+                        <button class="mode-btn" id="modeShort">Short Break</button>
+                        <button class="mode-btn" id="modeLong">Long Break</button>
+                    </div>
+
+                    <div class="timer-display">
+                        <svg class="progress-ring" width="300" height="300">
+                            <circle class="progress-ring__circle-bg" stroke="var(--color-border)" stroke-width="8"
+                                fill="transparent" r="130" cx="150" cy="150" />
+                            <circle class="progress-ring__circle" id="timerProgress" stroke="var(--color-primary)"
+                                stroke-width="8" fill="transparent" r="130" cx="150" cy="150" />
+                        </svg>
+                        <div class="time-left" id="timeLeft">25:00</div>
+                    </div>
+
+                    <div class="timer-actions">
+                        <button class="btn-primary" id="startBtn"
+                            style="width: 140px; height: 50px; font-size: var(--font-size-base);">Start</button>
+                        <button class="btn-secondary" id="resetBtn"
+                            style="width: 140px; height: 50px; font-size: var(--font-size-base);">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <!-- Playlist Tab Templates -->
+    <template id="playlistPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Playlist Tracker</h1>
+                    <p class="brand-subtitle">Organize and track your learning videos</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" onclick="app.openAddPlaylistModal()">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        <span>Add Playlist</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Playlist View & Tracker Options -->
+            <div class="playlist-settings-card"
+                style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-lg) var(--spacing-xl); margin-bottom: var(--spacing-lg); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--spacing-md);">
+                <div class="playlist-settings-text">
+                    <h3
+                        style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: 2px;">
+                        Motivational Sparks</h3>
+                    <p style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin: 0;">Receive
+                        supportive boosts when watching multiple lessons consecutively.</p>
+                </div>
+                <div style="display: flex; gap: var(--spacing-lg); align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="motivationalCounterBadge" class="badge badge-accent"
+                            style="font-weight: 700; font-size: var(--font-size-xs); padding: 4px 8px;">Lessons Watch
+                            Streak: 0</span>
+                    </div>
+                    <label class="theme-switch-container"
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: var(--font-size-sm); font-weight: 600; user-select: none;">
+                        <input type="checkbox" id="toggleMotivationalQuotes" style="display: none;"
+                            onchange="app.toggleMotivationalSettings(event)">
+                        <span class="theme-switch-control"
+                            style="width: 44px; height: 24px; background: var(--color-border); border-radius: 12px; position: relative; display: inline-block; transition: background 0.3s;">
+                            <span class="theme-switch-handle"
+                                style="width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></span>
+                        </span>
+                        <span>Sparks Enabled</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="playlists-container" id="playlistsGrid">
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Loading playlists...</p>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <!-- Playlist Detail Template -->
+    <template id="playlistDetailPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title" id="detailPlaylistTitle">Playlist Course</h1>
+                    <p class="brand-subtitle" id="detailPlaylistSub">Track your lesson progression</p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: var(--spacing-sm);">
+                    <button class="btn-danger-outline" id="deletePlaylistBtn">Delete Course</button>
+                    <button class="btn-secondary" id="playlistDetailBackBtn">Back to Courses</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <div class="playlist-course-layout">
+                <div class="playlist-progress-area"
+                    style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl); margin-bottom: var(--spacing-lg);">
+                    <div
+                        style="display: flex; justify-content: space-between; margin-bottom: var(--spacing-sm); font-family: var(--font-display); font-weight: 700;">
+                        <span style="font-size: var(--font-size-base);">Course Progress</span>
+                        <span id="detailProgressText">0%</span>
+                    </div>
+                    <div
+                        style="width: 100%; height: 8px; background: var(--color-border); border-radius: 4px; overflow: hidden; margin-bottom: var(--spacing-sm);">
+                        <div id="detailProgressBar"
+                            style="width: 0%; height: 100%; background: var(--color-primary); transition: width 0.4s ease;">
+                        </div>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: var(--font-size-sm); color: var(--color-text-secondary); font-weight: 500;">
+                        <span id="detailCompletedStats">0 of 0 videos completed</span>
+                        <span id="detailTimeStats">0m completed</span>
+                    </div>
+                </div>
+
+                <div class="playlist-course-grid"
+                    style="display: grid; grid-template-columns: 1fr 320px; gap: var(--spacing-lg);">
+                    <!-- Video items list -->
+                    <div class="video-list-container">
+                        <h3
+                            style="font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: 700; margin-bottom: var(--spacing-md);">
+                            Lesson Syllabus</h3>
+                        <div id="playlistDetailVideos"
+                            style="display: flex; flex-direction: column; gap: var(--spacing-sm);"></div>
+                    </div>
+
+                    <!-- Side control panel (groups) -->
+                    <div class="video-groups-container"
+                        style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl); height: fit-content; position: sticky; top: var(--spacing-lg);">
+                        <h3
+                            style="font-family: var(--font-display); font-size: var(--font-size-md); font-weight: 700; margin-bottom: var(--spacing-sm);">
+                            Learning Blocks</h3>
+                        <p
+                            style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+                            Group lessons into micro-goals and trace milestones. Complete a block to earn +200 XP bonus!
+                        </p>
+
+                        <div id="playlistDetailGroups"
+                            style="display: flex; flex-direction: column; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                        </div>
+
+                        <button class="btn-primary" style="width: 100%;" id="addBlockBtn">Add Learning Block</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <!-- Settings Template -->
+    <template id="settingsPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">Settings</h1>
+                    <p class="brand-subtitle">Manage your profile</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-secondary" id="settingsBackBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M15 10H5M5 10L9 6M5 10L9 14" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>Back</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Badges Inventory Widget for Normal Users -->
+            <div class="badges-showcase-section" id="userBadgesShowcaseCard"
+                style="display: none; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-lg) var(--spacing-xl); margin-bottom: var(--spacing-lg);">
+                <h3 class="settings-section-title"
+                    style="margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                    🏅 Badges Chest
+                </h3>
+                <div class="badges-grid-container" id="userBadgesContainer"
+                    style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
+                    <!-- Dynamic Badges -->
+                </div>
+            </div>
+
+            <div class="settings-container">
+                <!-- Profile Picture -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        Profile Picture
+                    </h3>
+                    <div class="settings-avatar-area">
+                        <div class="settings-avatar-preview" id="settingsAvatarPreview">
+                        </div>
+                        <div class="settings-avatar-actions">
+                            <input type="file" id="pictureFileInput" accept="image/*" style="display: none;">
+                            <button class="btn-primary" id="uploadPictureBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Upload Picture
+                            </button>
+                            <button class="btn-danger-outline" id="removePictureBtn">Remove Picture</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Info -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        Account Profile
+                    </h3>
+                    <form id="settingsProfileForm">
+                        <div class="form-group">
+                            <label for="settingsUsername">Username</label>
+                            <input type="text" id="settingsUsername" required placeholder="Enter username">
+                        </div>
+                        <div class="form-group">
+                            <label for="settingsEmail">Email Address</label>
+                            <input type="email" id="settingsEmail" required placeholder="Enter email">
+                        </div>
+                        <div class="settings-action-row">
+                            <button type="submit" class="btn-primary" id="saveProfileBtn">Save Profile Details</button>
+                        </div>
+                    </form>
+                    <div id="profileMsg" class="settings-msg"></div>
+                </div>
+
+                <!-- Password Info -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Change Password
+                    </h3>
+                    <div class="form-group">
+                        <label for="settingsCurrentPassword">Current Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="settingsCurrentPassword" required placeholder="••••••••"
+                                style="padding-right: var(--spacing-xl);">
+                            <button type="button" class="btn-icon" id="toggleCurrentPasswordBtn"
+                                style="position: absolute; right: var(--spacing-sm); top: 50%; transform: translateY(-50%); padding: 4px; display: flex; align-items: center; justify-content: center; height: auto; min-width: 0; background: transparent; border: none; color: var(--color-text-secondary); cursor: pointer;"><svg
+                                    width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="settingsNewPassword">New Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="settingsNewPassword" required placeholder="••••••••"
+                                style="padding-right: var(--spacing-xl);">
+                            <button type="button" class="btn-icon" id="toggleNewPasswordBtn"
+                                style="position: absolute; right: var(--spacing-sm); top: 50%; transform: translateY(-50%); padding: 4px; display: flex; align-items: center; justify-content: center; height: auto; min-width: 0; background: transparent; border: none; color: var(--color-text-secondary); cursor: pointer;"><svg
+                                    width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                </svg></button>
+                        </div>
+                    </div>
+                    <div class="settings-action-row">
+                        <button class="btn-primary" id="changePasswordBtn">Update Password</button>
+                    </div>
+                    <div id="passwordMsg" class="settings-msg"></div>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <!-- Admin Dashboard Page Template -->
+    <template id="adminPageTemplate">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-text">
+                    <h1 class="brand-title">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            style="vertical-align: -4px; margin-right: 8px;">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>Admin Dashboard
+                    </h1>
+                    <p class="brand-subtitle">Manage platform metrics, users, gamification, and broadcaster system</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-secondary" id="adminRefreshBtn" title="Refresh list and stats">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="btn-secondary" id="adminBackBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M15 10H5M5 10L9 6M5 10L9 14" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>Back</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Sub Navigation Tabs for Admin -->
+            <div class="admin-tab-nav"
+                style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-sm);">
+                <button class="admin-tab-btn active" data-tab="analytics" onclick="app.switchAdminTab('analytics')">📊
+                    Analytics & Overview</button>
+                <button class="admin-tab-btn" data-tab="users" onclick="app.switchAdminTab('users')">👥 User
+                    Management</button>
+                <button class="admin-tab-btn" data-tab="gamification" onclick="app.switchAdminTab('gamification')">🎮
+                    Gamification Center</button>
+                <button class="admin-tab-btn" data-tab="communications"
+                    onclick="app.switchAdminTab('communications')">📢 Global Broadcaster</button>
+            </div>
+
+            <!-- Tab Content Panel -->
+            <div class="admin-container">
+
+                <!-- Analytics & Overview Tab -->
+                <div id="adminTabAnalytics" class="admin-tab-content">
+                    <div class="admin-stats-row" id="adminStatsRow" style="margin-bottom: var(--spacing-lg);">
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-value" id="adminTotalUsers">—</div>
+                            <div class="admin-stat-label">Total Registered Users</div>
+                        </div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-value" id="adminActiveUsersToday">—</div>
+                            <div class="admin-stat-label">Active Users (Today)</div>
+                        </div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-value" id="adminActiveUsersWeek">—</div>
+                            <div class="admin-stat-label">Active Users (This Week)</div>
+                        </div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-value" id="adminAvgLevel">—</div>
+                            <div class="admin-stat-label">Average Platform Level</div>
+                        </div>
+                    </div>
+
+                    <div class="admin-grid-two-col"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+                        <!-- Feature Usage Breakdown -->
+                        <div class="admin-card"
+                            style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl);">
+                            <h3
+                                style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                                📈 Feature Activity Breakdown
+                            </h3>
+                            <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+                                <div
+                                    style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--color-border); padding-bottom: 6px;">
+                                    <span style="font-weight: 600; color: var(--color-text-secondary);">Total Habits
+                                        Tracked:</span>
+                                    <span id="adminTotalHabits"
+                                        style="font-weight: 700; color: var(--color-primary);">—</span>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--color-border); padding-bottom: 6px;">
+                                    <span style="font-weight: 600; color: var(--color-text-secondary);">Total To-Do
+                                        Tasks:</span>
+                                    <span id="adminTotalTasks"
+                                        style="font-weight: 700; color: var(--color-primary);">—</span>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--color-border); padding-bottom: 6px;">
+                                    <span style="font-weight: 600; color: var(--color-text-secondary);">Completed Focus
+                                        Sessions:</span>
+                                    <span id="adminTotalFocusSessions"
+                                        style="font-weight: 700; color: var(--color-primary);">—</span>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--color-border); padding-bottom: 6px;">
+                                    <span style="font-weight: 600; color: var(--color-text-secondary);">Learning Courses
+                                        Configured:</span>
+                                    <span id="adminTotalPlaylists"
+                                        style="font-weight: 700; color: var(--color-primary);">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Platform System Info -->
+                        <div class="admin-card"
+                            style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl);">
+                            <h3
+                                style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                                🛡️ Administration System Info
+                            </h3>
+                            <div
+                                style="display: flex; flex-direction: column; gap: var(--spacing-sm); font-size: var(--font-size-sm); color: var(--color-text-secondary);">
+                                <p style="margin: 0;"><strong>Active Platform Instance:</strong> Production Hub</p>
+                                <p style="margin: 0;"><strong>Database System:</strong> Cloud Firestore (Online)</p>
+                                <p style="margin: 0;"><strong>Authentication:</strong> Firebase Auth client SDK</p>
+                                <p style="margin: 0;"><strong>Active Roles:</strong> Admin (System Superuser), User
+                                    (Normal User)</p>
+                                <p
+                                    style="margin: 0; color: var(--color-primary); font-weight: 600; margin-top: var(--spacing-sm);">
+                                    All modules are synced in real-time across users.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced User Management Tab -->
+                <div id="adminTabUsers" class="admin-tab-content" style="display: none;">
+                    <div class="admin-filters-bar"
+                        style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                        <input type="text" id="adminUserSearch" class="admin-input-text"
+                            placeholder="🔍 Search name, email or uid..." oninput="app.filterUserTable()"
+                            style="flex: 1; padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface);">
+                        <select id="adminUserStatusFilter" class="admin-select" onchange="app.filterUserTable()"
+                            style="padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface); font-weight: 600;">
+                            <option value="all">All Account Statuses</option>
+                            <option value="active">Active Only</option>
+                            <option value="suspended">Suspended Only</option>
+                            <option value="banned">Banned Only</option>
+                        </select>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                        <div class="admin-table-header">
+                            <h3 class="admin-table-title">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                </svg>
+                                Registered Users Registry
+                            </h3>
+                        </div>
+                        <div class="admin-table-body" id="adminUserTableBody">
+                            <!-- Populated Dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gamification Control Center Tab -->
+                <div id="adminTabGamification" class="admin-tab-content" style="display: none;">
+                    <div class="admin-grid-two-col"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+                        <!-- Left: Settings & Builders -->
+                        <div style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+
+                            <!-- XP Scaling Settings -->
+                            <div class="admin-card"
+                                style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl);">
+                                <h3
+                                    style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                                    ⚙️ Dynamic XP Scaling Coefficients
+                                </h3>
+                                <form id="adminXpScalingForm" onsubmit="app.saveXPScalingSettings(event)">
+                                    <div
+                                        style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 11px;">XP Per Habit checked</label>
+                                            <input type="number" id="xpScaleHabit" class="admin-input" required min="1"
+                                                value="50">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 11px;">XP Per Task completed</label>
+                                            <input type="number" id="xpScaleTask" class="admin-input" required min="1"
+                                                value="30">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 11px;">XP Per Pomodoro session</label>
+                                            <input type="number" id="xpScalePomodoro" class="admin-input" required
+                                                min="1" value="150">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 11px;">XP Per Video completion</label>
+                                            <input type="number" id="xpScaleVideo" class="admin-input" required min="1"
+                                                value="40">
+                                        </div>
+                                        <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
+                                            <label style="font-size: 11px;">Base XP required for L2 (linear
+                                                multiplier)</label>
+                                            <input type="number" id="xpScaleBase" class="admin-input" required min="100"
+                                                value="500">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn-primary" style="width: 100%;">Save Global
+                                        Constants</button>
+                                </form>
+                            </div>
+
+                            <!-- Global Challenges Builder -->
+                            <div class="admin-card"
+                                style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl);">
+                                <h3
+                                    style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                                    🏆 Global Platform Challenges Builder
+                                </h3>
+                                <form id="adminChallengeForm" onsubmit="app.createGlobalChallenge(event)">
+                                    <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+                                        <label style="font-size: 11px;">Challenge Name</label>
+                                        <input type="text" id="challengeTitle" class="admin-input" required
+                                            placeholder="e.g., Early Bird Streak">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+                                        <label style="font-size: 11px;">Description</label>
+                                        <input type="text" id="challengeDesc" class="admin-input" required
+                                            placeholder="e.g., Complete 5 focus sessions this week">
+                                    </div>
+                                    <div
+                                        style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 11px;">Target Action Count</label>
+                                            <input type="number" id="challengeTarget" class="admin-input" required
+                                                min="1" value="5">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 11px;">XP Prize Reward</label>
+                                            <input type="number" id="challengePrize" class="admin-input" required
+                                                min="10" value="500">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn-primary" style="width: 100%;">Broadcast Active
+                                        Challenge</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Right: Badges & Challenge Status -->
+                        <div style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+
+                            <!-- Badge Assignment -->
+                            <div class="admin-card"
+                                style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl);">
+                                <h3
+                                    style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                                    🏅 Badge & Achievements Assignment
+                                </h3>
+                                <form id="adminBadgeForm" onsubmit="app.awardBadgeToUser(event)">
+                                    <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+                                        <label style="font-size: 11px;">Select Target User</label>
+                                        <select id="badgeTargetUser" class="admin-role-select" required>
+                                            <option value="">-- Choose User --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: var(--spacing-md);">
+                                        <label style="font-size: 11px;">Select Achievement Badge</label>
+                                        <select id="badgeName" class="admin-role-select" required>
+                                            <option value="🥇 Productivity Legend">🥇 Productivity Legend</option>
+                                            <option value="⚡ Habit Hero">⚡ Habit Hero</option>
+                                            <option value="🍅 Pomodoro Master">🍅 Pomodoro Master</option>
+                                            <option value="📚 Playlist Scholar">📚 Playlist Scholar</option>
+                                            <option value="🧘 Mind Artisan">🧘 Mind Artisan</option>
+                                            <option value="💎 Mornigami Veteran">💎 Mornigami Veteran</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn-primary" style="width: 100%;">Award Badge
+                                        Immediately</button>
+                                </form>
+                            </div>
+
+                            <!-- List of Active Global Challenges -->
+                            <div class="admin-card"
+                                style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl); flex: 1; display: flex; flex-direction: column;">
+                                <h3
+                                    style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                                    📢 Active Platform-Wide Challenges
+                                </h3>
+                                <div id="adminActiveChallengesList"
+                                    style="display: flex; flex-direction: column; gap: var(--spacing-sm); overflow-y: auto; flex: 1;">
+                                    <!-- Dynamic Active Challenges -->
+                                    <div class="admin-loading" style="padding: var(--spacing-lg);">
+                                        <span>No challenges configured.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Communications Tab -->
+                <div id="adminTabCommunications" class="admin-tab-content" style="display: none;">
+                    <div class="admin-card"
+                        style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl); max-width: 600px; margin: 0 auto;">
+                        <h3
+                            style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 8px;">
+                            📢 System-Wide Announcements Broadcaster
+                        </h3>
+                        <form id="adminBroadcasterForm" onsubmit="app.publishAnnouncement(event)">
+                            <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+                                <label style="font-size: 11px;">Announcement Banner Message</label>
+                                <textarea id="announcementInputText" required
+                                    placeholder="Type system-wide banner text here... (e.g., Server maintenance scheduled for 11PM today)"
+                                    style="width: 100%; height: 100px; padding: var(--spacing-sm); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-background); font-family: var(--font-body); font-size: var(--font-size-sm); resize: none;"></textarea>
+                            </div>
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 11px;">Banner Styling Level</label>
+                                    <select id="announcementStyleType" class="admin-role-select">
+                                        <option value="info">💡 Information (Info Primary)</option>
+                                        <option value="success">✅ Achievements Boost (Success Green)</option>
+                                        <option value="warning">⚠️ Warning Alert (Warning Yellow)</option>
+                                        <option value="danger">🚨 Severe Announcement (Danger Red)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"
+                                    style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding-left: var(--spacing-md);">
+                                    <label class="theme-switch-container"
+                                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: var(--font-size-xs); font-weight: 600;">
+                                        <input type="checkbox" id="announcementIsActive" checked style="display: none;">
+                                        <span class="theme-switch-control"
+                                            style="width: 44px; height: 24px; background: var(--color-border); border-radius: 12px; position: relative; display: inline-block; transition: background 0.3s;">
+                                            <span class="theme-switch-handle"
+                                                style="width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></span>
+                                        </span>
+                                        <span>Active Broadcast</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="width: 100%;">Broadcast Announcement
+                                Banner</button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </template>
+
     <!-- Motivational Modal -->
     <div id="motivationalPopup" class="modal">
         <div class="modal-backdrop" onclick="app.closeMotivationalPopup()"></div>
@@ -1244,8 +2315,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCs7MTj0iVx11l2YE0vP5YB9fUGhkeMOE4",
@@ -1264,7 +2335,7 @@
 
         window.auth = auth;
         window.db = db;
-        window.firestoreUtils = { doc, setDoc, getDoc, deleteDoc };
+        window.firestoreUtils = { doc, setDoc, getDoc, deleteDoc, collection, getDocs };
 
         window.firebaseAuth = {
             createUserWithEmailAndPassword,
@@ -1274,7 +2345,8 @@
             updateEmail,
             updatePassword,
             reauthenticateWithCredential,
-            EmailAuthProvider
+            EmailAuthProvider,
+            sendPasswordResetEmail
         };
 
         onAuthStateChanged(auth, (user) => {

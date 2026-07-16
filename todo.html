@@ -37,6 +37,19 @@
                 <a href="todo.html" class="nav-link active">To-Do List</a>
                 <a href="pomodoro.html" class="nav-link">Pomodoro</a>
             </div>
+            <!-- XP Progress Bar Widget -->
+            <div class="xp-nav-widget" id="xpNavWidget" title="XP Progress (Earn XP by completing habits, tasks, focus sessions, and videos)">
+                <div class="xp-level-badge" id="globalLevelBadge">L1</div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--color-text-secondary); line-height: 1;">
+                        <span>XP Progress</span>
+                        <span id="globalXPText">0 / 500 XP</span>
+                    </div>
+                    <div class="xp-progress-bar-container">
+                        <div class="xp-progress-bar-fill" id="globalXPBarFill"></div>
+                    </div>
+                </div>
+            </div>
             <div class="nav-actions" style="display: flex; gap: var(--spacing-sm); align-items: center;">
                 <div class="accent-picker-wrapper" style="position: relative; display: flex; align-items: center;">
                     <button class="btn-icon" id="accentColorBtn" title="Change accent color">
