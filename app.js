@@ -1387,8 +1387,7 @@ class ProductivityHub {
         }
 
         // Update page title
-        // Update page title
-        document.title = "ProTrack";
+        document.title = "Mornigami";
     }
 
     openPomodoroSettings() {
