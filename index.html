@@ -114,20 +114,36 @@
 
         <!-- Auth Form Section (Hidden by default) -->
         <div id="authOverlayCard" class="auth-overlay-card" style="display: none;">
-            <button class="btn-icon auth-theme-toggle" id="overlayThemeToggle" title="Toggle theme" type="button"
-                style="position: absolute; top: var(--spacing-md); right: var(--spacing-md);">
-                <svg class="theme-icon sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5" />
-                    <path
-                        d="M10 2V3M10 17V18M18 10H17M3 10H2M15.657 4.343L14.95 5.05M5.05 14.95L4.343 15.657M15.657 15.657L14.95 14.95M5.05 5.05L4.343 4.343"
-                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                </svg>
-                <svg class="theme-icon moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path
-                        d="M17 10.5C16.9 14.6 13.6 18 9.5 18C5.4 18 2 14.6 2 10.5C2 6.9 4.5 3.9 8 3.1C7.4 3.9 7 4.9 7 6C7 8.8 9.2 11 12 11C13.1 11 14.1 10.6 14.9 10C14.9 10.2 17 10.3 17 10.5Z"
-                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-            </button>
+            <div class="auth-header-actions" style="position: absolute; top: var(--spacing-md); right: var(--spacing-md); display: flex; gap: var(--spacing-xs); align-items: center;">
+                <!-- Accent Color Picker -->
+                <div class="accent-picker-wrapper" style="position: relative; display: flex; align-items: center;">
+                    <button class="btn-icon" id="overlayAccentColorBtn" title="Change accent color" type="button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22C17.52 22 22 17.52 22 12S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z" />
+                            <circle cx="7.5" cy="10.5" r="1.5" fill="currentColor" />
+                            <circle cx="11.5" cy="7.5" r="1.5" fill="currentColor" />
+                            <circle cx="16.5" cy="9.5" r="1.5" fill="currentColor" />
+                            <circle cx="15.5" cy="14.5" r="1.5" fill="currentColor" />
+                        </svg>
+                    </button>
+                    <div class="accent-color-dropdown" id="overlayAccentColorDropdown"></div>
+                </div>
+                <!-- Theme Toggle -->
+                <button class="btn-icon auth-theme-toggle" id="overlayThemeToggle" title="Toggle theme" type="button">
+                    <svg class="theme-icon sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5" />
+                        <path
+                            d="M10 2V3M10 17V18M18 10H17M3 10H2M15.657 4.343L14.95 5.05M5.05 14.95L4.343 15.657M15.657 15.657L14.95 14.95M5.05 5.05L4.343 4.343"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    </svg>
+                    <svg class="theme-icon moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path
+                            d="M17 10.5C16.9 14.6 13.6 18 9.5 18C5.4 18 2 14.6 2 10.5C2 6.9 4.5 3.9 8 3.1C7.4 3.9 7 4.9 7 6C7 8.8 9.2 11 12 11C13.1 11 14.1 10.6 14.9 10C14.9 10.2 17 10.3 17 10.5Z"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
             <div class="auth-overlay-brand" style="margin-bottom: 8px;">
                 <div class="auth-overlay-brand-icon">
                     <img src="icon.png" alt="Mornigami Logo" style="width: 48px; height: 48px; object-fit: contain;">
@@ -953,20 +969,36 @@
 
     <template id="authPageTemplate">
         <div class="auth-container">
-            <button class="btn-icon auth-theme-toggle" id="pageThemeToggle" title="Toggle theme" type="button"
-                style="position: absolute; top: var(--spacing-md); right: var(--spacing-md);">
-                <svg class="theme-icon sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5" />
-                    <path
-                        d="M10 2V3M10 17V18M18 10H17M3 10H2M15.657 4.343L14.95 5.05M5.05 14.95L4.343 15.657M15.657 15.657L14.95 14.95M5.05 5.05L4.343 4.343"
-                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                </svg>
-                <svg class="theme-icon moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path
-                        d="M17 10.5C16.9 14.6 13.6 18 9.5 18C5.4 18 2 14.6 2 10.5C2 6.9 4.5 3.9 8 3.1C7.4 3.9 7 4.9 7 6C7 8.8 9.2 11 12 11C13.1 11 14.1 10.6 14.9 10C14.9 10.2 17 10.3 17 10.5Z"
-                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-            </button>
+            <div class="auth-header-actions" style="position: absolute; top: var(--spacing-md); right: var(--spacing-md); display: flex; gap: var(--spacing-xs); align-items: center;">
+                <!-- Accent Color Picker -->
+                <div class="accent-picker-wrapper" style="position: relative; display: flex; align-items: center;">
+                    <button class="btn-icon" id="pageAccentColorBtn" title="Change accent color" type="button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22C17.52 22 22 17.52 22 12S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z" />
+                            <circle cx="7.5" cy="10.5" r="1.5" fill="currentColor" />
+                            <circle cx="11.5" cy="7.5" r="1.5" fill="currentColor" />
+                            <circle cx="16.5" cy="9.5" r="1.5" fill="currentColor" />
+                            <circle cx="15.5" cy="14.5" r="1.5" fill="currentColor" />
+                        </svg>
+                    </button>
+                    <div class="accent-color-dropdown" id="pageAccentColorDropdown"></div>
+                </div>
+                <!-- Theme Toggle -->
+                <button class="btn-icon auth-theme-toggle" id="pageThemeToggle" title="Toggle theme" type="button">
+                    <svg class="theme-icon sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5" />
+                        <path
+                            d="M10 2V3M10 17V18M18 10H17M3 10H2M15.657 4.343L14.95 5.05M5.05 14.95L4.343 15.657M15.657 15.657L14.95 14.95M5.05 5.05L4.343 4.343"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    </svg>
+                    <svg class="theme-icon moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path
+                            d="M17 10.5C16.9 14.6 13.6 18 9.5 18C5.4 18 2 14.6 2 10.5C2 6.9 4.5 3.9 8 3.1C7.4 3.9 7 4.9 7 6C7 8.8 9.2 11 12 11C13.1 11 14.1 10.6 14.9 10C14.9 10.2 17 10.3 17 10.5Z"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
             <div class="auth-header">
                 <h2 class="auth-title" id="authTitle">Sign In</h2>
                 <p class="auth-subtitle" id="authSubtitle">Access your productivity hub</p>

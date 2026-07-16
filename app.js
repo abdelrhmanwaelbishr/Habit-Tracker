@@ -90,23 +90,32 @@ class ProductivityHub {
             this.setAccentColor('#0EA5A0');
         }
 
-        this.renderAccentDropdown();
+        this.renderAccentDropdowns();
     }
 
-    toggleAccentDropdown(event) {
+    toggleAccentDropdown(event, dropdownId = 'accentColorDropdown') {
         if (event) event.stopPropagation();
 
-        const dropdown = document.getElementById('accentColorDropdown');
+        const dropdown = document.getElementById(dropdownId);
         if (dropdown) {
             dropdown.classList.toggle('show');
             if (dropdown.classList.contains('show')) {
-                this.renderAccentDropdown();
+                this.renderAccentDropdown(dropdownId);
             }
         }
     }
 
-    renderAccentDropdown() {
-        const dropdown = document.getElementById('accentColorDropdown');
+    renderAccentDropdowns() {
+        const dropdownIds = ['accentColorDropdown', 'overlayAccentColorDropdown', 'pageAccentColorDropdown'];
+        dropdownIds.forEach(id => {
+            if (document.getElementById(id)) {
+                this.renderAccentDropdown(id);
+            }
+        });
+    }
+
+    renderAccentDropdown(dropdownId = 'accentColorDropdown') {
+        const dropdown = document.getElementById(dropdownId);
         if (!dropdown) return;
 
         const isDark = document.body.classList.contains('dark-theme');
@@ -144,7 +153,7 @@ class ProductivityHub {
 
     selectAccentColor(hex) {
         this.setAccentColor(hex);
-        this.renderAccentDropdown();
+        this.renderAccentDropdowns();
     }
 
     setAccentColor(hex) {
@@ -191,6 +200,12 @@ class ProductivityHub {
         const accentColorBtn = document.getElementById('accentColorBtn');
         if (accentColorBtn) {
             accentColorBtn.addEventListener('click', (e) => this.toggleAccentDropdown(e));
+        }
+
+        // Overlay accent color picker toggle
+        const overlayAccentColorBtn = document.getElementById('overlayAccentColorBtn');
+        if (overlayAccentColorBtn) {
+            overlayAccentColorBtn.addEventListener('click', (e) => this.toggleAccentDropdown(e, 'overlayAccentColorDropdown'));
         }
 
         // Login Button
@@ -282,8 +297,11 @@ class ProductivityHub {
                 });
             }
             if (!e.target.closest('.accent-picker-wrapper')) {
-                const dropdown = document.getElementById('accentColorDropdown');
-                if (dropdown) dropdown.classList.remove('show');
+                const dropdowns = ['accentColorDropdown', 'overlayAccentColorDropdown', 'pageAccentColorDropdown'];
+                dropdowns.forEach(id => {
+                    const dropdown = document.getElementById(id);
+                    if (dropdown) dropdown.classList.remove('show');
+                });
             }
             // Close user profile dropdown on outside click
             if (!e.target.closest('#userMenuWrapper')) {
@@ -2960,6 +2978,12 @@ pause
         const pageThemeToggle = document.getElementById('pageThemeToggle');
         if (pageThemeToggle) {
             pageThemeToggle.addEventListener('click', () => this.toggleTheme());
+        }
+
+        // Page accent color picker toggle
+        const pageAccentColorBtn = document.getElementById('pageAccentColorBtn');
+        if (pageAccentColorBtn) {
+            pageAccentColorBtn.addEventListener('click', (e) => this.toggleAccentDropdown(e, 'pageAccentColorDropdown'));
         }
 
         this.authMode = 'signin';

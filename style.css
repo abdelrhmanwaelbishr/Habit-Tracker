@@ -230,6 +230,10 @@ body {
     justify-content: center;
 }
 
+.brand-icon img {
+    border-radius: var(--radius-md);
+}
+
 .brand-text {
     display: flex;
     flex-direction: column;
@@ -3218,6 +3222,10 @@ body.dark-theme .auth-overlay {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.auth-overlay-brand-icon img {
+    border-radius: var(--radius-md);
 }
 
 .auth-overlay-brand-text {
