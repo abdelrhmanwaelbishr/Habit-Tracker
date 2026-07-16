@@ -181,6 +181,12 @@ class ProductivityHub {
         // Theme toggle
         document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
 
+        // Overlay theme toggle
+        const overlayThemeToggle = document.getElementById('overlayThemeToggle');
+        if (overlayThemeToggle) {
+            overlayThemeToggle.addEventListener('click', () => this.toggleTheme());
+        }
+
         // Accent color picker toggle
         const accentColorBtn = document.getElementById('accentColorBtn');
         if (accentColorBtn) {
@@ -2949,6 +2955,12 @@ pause
     setupAuthEventListeners() {
         const authForm = document.getElementById('authForm');
         const toggleAuthMode = document.getElementById('toggleAuthMode');
+
+        // Page theme toggle
+        const pageThemeToggle = document.getElementById('pageThemeToggle');
+        if (pageThemeToggle) {
+            pageThemeToggle.addEventListener('click', () => this.toggleTheme());
+        }
 
         this.authMode = 'signin';
 

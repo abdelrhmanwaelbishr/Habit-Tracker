@@ -15,18 +15,21 @@
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="stylesheet" href="style.css">
 </head>
- 
+
 <body>
     <!-- Navigation Bar -->
     <nav class="main-nav">
         <div class="nav-content">
             <div class="nav-brand">
                 <div class="brand-icon">
-                    <img src="icon.png" alt="Mornigami Logo" style="width: 32px; height: 32px; object-fit: contain;">
+                    <img src="icon.png" alt="Mornigami Logo" style="width: 48px; height: 48px; object-fit: contain;">
                 </div>
                 <div class="brand-text-container" style="display: flex; flex-direction: column; line-height: 1.1;">
-                    <span class="nav-brand-text" style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.03em;">Mornigami</span>
-                    <span class="nav-brand-subtext" style="font-size: 0.65rem; color: var(--color-text-secondary); font-weight: 500;">Shape your Morning</span>
+                    <span class="nav-brand-text"
+                        style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.03em;">Mornigami</span>
+                    <span class="nav-brand-subtext"
+                        style="font-size: 0.65rem; color: var(--color-text-secondary); font-weight: 500;">Shape your
+                        Morning</span>
                 </div>
             </div>
             <div class="nav-links">
@@ -111,17 +114,34 @@
 
         <!-- Auth Form Section (Hidden by default) -->
         <div id="authOverlayCard" class="auth-overlay-card" style="display: none;">
+            <button class="btn-icon auth-theme-toggle" id="overlayThemeToggle" title="Toggle theme" type="button"
+                style="position: absolute; top: var(--spacing-md); right: var(--spacing-md);">
+                <svg class="theme-icon sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5" />
+                    <path
+                        d="M10 2V3M10 17V18M18 10H17M3 10H2M15.657 4.343L14.95 5.05M5.05 14.95L4.343 15.657M15.657 15.657L14.95 14.95M5.05 5.05L4.343 4.343"
+                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+                <svg class="theme-icon moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path
+                        d="M17 10.5C16.9 14.6 13.6 18 9.5 18C5.4 18 2 14.6 2 10.5C2 6.9 4.5 3.9 8 3.1C7.4 3.9 7 4.9 7 6C7 8.8 9.2 11 12 11C13.1 11 14.1 10.6 14.9 10C14.9 10.2 17 10.3 17 10.5Z"
+                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
             <div class="auth-overlay-brand" style="margin-bottom: 8px;">
                 <div class="auth-overlay-brand-icon">
                     <img src="icon.png" alt="Mornigami Logo" style="width: 32px; height: 32px; object-fit: contain;">
                 </div>
                 <span class="auth-overlay-brand-text">Mornigami</span>
             </div>
-            <p class="auth-brand-formula" style="font-size: 0.8rem; color: var(--color-text-secondary); text-align: center; margin-top: 0; margin-bottom: 24px; font-weight: 500; font-family: var(--font-body);">Morning + Origami = Mornigami</p>
+            <p class="auth-brand-formula"
+                style="font-size: 0.8rem; color: var(--color-text-secondary); text-align: center; margin-top: 0; margin-bottom: 24px; font-weight: 500; font-family: var(--font-body);">
+                Morning + Origami = Mornigami</p>
 
             <div class="auth-overlay-header">
                 <h2 class="auth-title" id="overlayAuthTitle">Sign In</h2>
-                <p class="auth-subtitle" id="overlayAuthSubtitle">Shape your Morning. Fold your habits into structure.</p>
+                <p class="auth-subtitle" id="overlayAuthSubtitle">Shape your Morning. Fold your habits into structure.
+                </p>
             </div>
 
             <div id="overlayAuthMessage" class="auth-message"></div>
@@ -933,6 +953,20 @@
 
     <template id="authPageTemplate">
         <div class="auth-container">
+            <button class="btn-icon auth-theme-toggle" id="pageThemeToggle" title="Toggle theme" type="button"
+                style="position: absolute; top: var(--spacing-md); right: var(--spacing-md);">
+                <svg class="theme-icon sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5" />
+                    <path
+                        d="M10 2V3M10 17V18M18 10H17M3 10H2M15.657 4.343L14.95 5.05M5.05 14.95L4.343 15.657M15.657 15.657L14.95 14.95M5.05 5.05L4.343 4.343"
+                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+                <svg class="theme-icon moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path
+                        d="M17 10.5C16.9 14.6 13.6 18 9.5 18C5.4 18 2 14.6 2 10.5C2 6.9 4.5 3.9 8 3.1C7.4 3.9 7 4.9 7 6C7 8.8 9.2 11 12 11C13.1 11 14.1 10.6 14.9 10C14.9 10.2 17 10.3 17 10.5Z"
+                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
             <div class="auth-header">
                 <h2 class="auth-title" id="authTitle">Sign In</h2>
                 <p class="auth-subtitle" id="authSubtitle">Access your productivity hub</p>

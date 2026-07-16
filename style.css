@@ -225,13 +225,9 @@ body {
 .brand-icon {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-primary-contrast, white);
-    box-shadow: var(--shadow-md);
 }
 
 .brand-text {
@@ -2861,6 +2857,7 @@ body.dark-theme .playlist-group-card .group-video-cell.completed {
 
 /* Auth Page layout */
 .auth-container {
+    position: relative;
     max-width: 440px;
     margin: var(--spacing-3xl) auto;
     padding: var(--spacing-2xl);
@@ -3218,13 +3215,9 @@ body.dark-theme .auth-overlay {
 .auth-overlay-brand-icon {
     width: 44px;
     height: 44px;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    box-shadow: var(--shadow-md);
 }
 
 .auth-overlay-brand-text {
