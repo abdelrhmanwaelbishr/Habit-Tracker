@@ -4378,4 +4378,205 @@ body.dark-theme .auth-overlay {
     }
 }
 
+/* ========================================
+   ADDITIONAL RETENTION FEATURES STYLES
+   ======================================== */
+
+/* Daily Bounties styling */
+.bounty-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-surface);
+    padding: var(--spacing-md);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    transition: transform var(--transition-base), border-color var(--transition-base);
+}
+
+.bounty-item:hover {
+    transform: translateX(2px);
+    border-color: var(--color-warning);
+}
+
+.bounty-item.completed {
+    opacity: 0.75;
+    background: rgba(16, 185, 129, 0.04);
+    border-color: var(--color-success);
+}
+
+.bounty-title-text {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.bounty-item.completed .bounty-title-text {
+    text-decoration: line-through;
+    color: var(--color-text-secondary);
+}
+
+.bounty-reward-badge {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.15));
+    border: 1px solid var(--color-warning);
+    color: var(--color-warning-dark, #D97706);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+/* Ambient Focus Audio Track selection */
+.audio-track-btn.active {
+    background: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--color-surface) !important;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Customizer Store cards */
+.store-card {
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+    box-shadow: var(--shadow-sm);
+}
+
+.store-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.store-card.unlocked {
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.store-card.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 12px rgba(14, 165, 160, 0.25);
+}
+
+.store-card-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.store-card-badge.locked {
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+}
+
+.store-card-badge.purchased {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+}
+
+.store-card-badge.applied {
+    background: var(--color-primary);
+    color: var(--color-surface);
+}
+
+/* Animated custom Borders on level/badges */
+.global-badge-icon.spark-border {
+    border-color: #F59E0B !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6) !important;
+    animation: pulseBorder 1.5s infinite alternate;
+}
+
+@keyframes pulseBorder {
+    0% { transform: scale(1); box-shadow: 0 0 5px rgba(245, 158, 11, 0.4); }
+    100% { transform: scale(1.1); box-shadow: 0 0 15px rgba(245, 158, 11, 0.8); }
+}
+
+.global-badge-icon.fire-border {
+    border-color: #EF4444 !important;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6) !important;
+    animation: flameBorder 1s infinite alternate;
+}
+
+@keyframes flameBorder {
+    0% { transform: scale(1) rotate(-2deg); box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+    100% { transform: scale(1.08) rotate(2deg); box-shadow: 0 0 18px rgba(239, 68, 68, 0.9); }
+}
+
+.global-badge-icon.rainbow-border {
+    border-color: transparent !important;
+    background-image: linear-gradient(var(--color-surface), var(--color-surface)), linear-gradient(135deg, #EF4444, #F59E0B, #10B981, #38BDF8, #8A2BE2);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5) !important;
+    animation: rainbowBorder 3s linear infinite;
+}
+
+@keyframes rainbowBorder {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+/* Leaderboard list entries */
+.leaderboard-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-sm) var(--spacing-md);
+    transition: transform var(--transition-base);
+}
+
+.leaderboard-row:hover {
+    transform: scale(1.01);
+}
+
+.leaderboard-row.current-user {
+    background: linear-gradient(135deg, rgba(14, 165, 160, 0.05), rgba(56, 189, 248, 0.05));
+    border-color: var(--color-primary);
+}
+
+.rank-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: var(--font-size-xs);
+    font-weight: 800;
+}
+
+.rank-badge.first { background: #FEF3C7; color: #D97706; border: 1px solid #FCD34D; }
+.rank-badge.second { background: #F3F4F6; color: #4B5563; border: 1px solid #E5E7EB; }
+.rank-badge.third { background: #FFEDD5; color: #EA580C; border: 1px solid #FED7AA; }
+.rank-badge.normal { background: var(--color-bg); color: var(--color-text-secondary); border: 1.5px solid var(--color-border); }
+
+/* Friend card rows */
+.friend-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.friend-row:last-child {
+    border-bottom: none;
+}
+
+
 

@@ -6,6 +6,57 @@ class ProductivityHub {
     constructor() {
         this.currentPage = 'home';
         this.userBadges = [];
+
+        // Daily Bounties
+        this.bountyInterval = null;
+        this.dailyBounties = [];
+        this.bountyStats = {
+            pomodorosCompletedToday: 0,
+            habitsCompletedToday: 0,
+            tasksCompletedToday: 0,
+            dateStr: ''
+        };
+
+        // Focus Ambience Audio
+        this.focusAudio = new Audio();
+        this.focusAudio.loop = true;
+        this.focusAudioTrack = 'lofi';
+        this.focusAudioPlaying = false;
+        this.audioTracks = {
+            lofi: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            rain: "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
+            cafe: "https://actions.google.com/sounds/v1/ambiences/coffee_shop_atmosphere.ogg"
+        };
+
+        // Customizer Store
+        this.spentXP = parseInt(localStorage.getItem('spentXP')) || 0;
+        this.unlockedItems = this.loadData('unlockedItems') || { colors: [], avatars: [], borders: [] };
+        this.activeAvatar = localStorage.getItem('activeAvatar') || '';
+        this.activeBorder = localStorage.getItem('activeBorder') || '';
+        this.currentStoreTab = 'colors';
+        this.storeItems = {
+            colors: [
+                { id: 'color_sakura', name: 'Sakura Pink', value: '#FDA4AF', cost: 300, desc: 'Unlocks a pastel cherry blossom accent color.' },
+                { id: 'color_mint', name: 'Mint Sage', value: '#A7F3D0', cost: 300, desc: 'Unlocks a fresh minty green accent color.' },
+                { id: 'color_butter', name: 'Butter Cream', value: '#FDE68A', cost: 300, desc: 'Unlocks a warm, creamy morning yellow accent color.' },
+                { id: 'color_lavender', name: 'Lavender Mist', value: '#DDD6FE', cost: 300, desc: 'Unlocks a soothing lavender accent color.' }
+            ],
+            avatars: [
+                { id: 'avatar_fox', name: 'Origami Fox', value: '🦊', cost: 500, desc: 'Set foxy origami as your profile avatar.' },
+                { id: 'avatar_crane', name: 'Origami Crane', value: '🕊️', cost: 500, desc: 'Set graceful crane as your profile avatar.' },
+                { id: 'avatar_frog', name: 'Origami Frog', value: '🐸', cost: 500, desc: 'Set jumping frog as your profile avatar.' },
+                { id: 'avatar_dragon', name: 'Origami Dragon', value: '🐉', cost: 1000, desc: 'Set legendary dragon as your profile avatar.' }
+            ],
+            borders: [
+                { id: 'border_spark', name: 'Sparkling Border', value: 'spark-border', cost: 400, desc: 'A subtle gold sparkling animation border for your badge.' },
+                { id: 'border_fire', name: 'Fire Border', value: 'fire-border', cost: 400, desc: 'A hot fire flame animation border for your badge.' },
+                { id: 'border_rainbow', name: 'Rainbow Border', value: 'rainbow-border', cost: 800, desc: 'A premium cycling rainbow gradient border for your badge.' }
+            ]
+        };
+
+        // Friends list
+        this.friendsList = [];
+
         this.habits = this.loadData('habits') || [];
         this.tasks = this.loadData('tasks') || [];
         this.pomodoroSettings = this.loadData('pomodoroSettings') || {
@@ -61,6 +112,9 @@ class ProductivityHub {
         this.applyTheme();
         this.setupEventListeners();
         this.setupOverlayAuthEventListeners();
+        this.checkAndResetDailyBounties();
+        this.bountyInterval = setInterval(() => this.updateBountyCountdown(), 1000);
+        this.updateBountyCountdown();
         this.renderPage(this.currentPage);
         this.checkPomodoroStats();
         this.updateXPUI();
@@ -141,6 +195,12 @@ class ProductivityHub {
 
         iconEl.textContent = emoji;
         tooltipEl.textContent = badge;
+
+        // Apply active custom border if any
+        iconEl.className = 'global-badge-icon'; // Reset
+        if (this.activeBorder) {
+            iconEl.classList.add(this.activeBorder);
+        }
     }
 
     showXPFloatingText(amount, reason) {
@@ -547,6 +607,7 @@ class ProductivityHub {
         switch (page) {
             case 'home':
                 content.innerHTML = document.getElementById('homePageTemplate').innerHTML;
+                this.renderDailyBounties();
                 break;
             case 'habits':
                 content.innerHTML = document.getElementById('habitsPageTemplate').innerHTML;
@@ -566,6 +627,15 @@ class ProductivityHub {
                 this.setupPomodoroEventListeners();
                 this.updatePomodoroDisplay();
                 this.updatePomodoroStats();
+                this.syncFocusAudioUI();
+                break;
+            case 'store':
+                content.innerHTML = document.getElementById('storePageTemplate').innerHTML;
+                this.renderStore();
+                break;
+            case 'community':
+                content.innerHTML = document.getElementById('communityPageTemplate').innerHTML;
+                this.renderCommunity();
                 break;
             case 'playlist':
                 content.innerHTML = document.getElementById('playlistPageTemplate').innerHTML;
@@ -973,6 +1043,7 @@ class ProductivityHub {
 
         if (gained) {
             this.gainXP(earnedXP, `Habit completed${streakMsg}`);
+            this.trackBountyProgress('habits', 1);
         }
     }
 
@@ -1456,6 +1527,7 @@ class ProductivityHub {
 
         if (completedNow) {
             this.gainXP(this.xpConfig ? this.xpConfig.task : 30, "Task Completed");
+            this.trackBountyProgress('tasks', 1);
         }
     }
 
@@ -1615,6 +1687,7 @@ class ProductivityHub {
 
             // Award XP
             this.gainXP(this.xpConfig ? this.xpConfig.pomodoro : 150, "Focus Session Complete");
+            this.trackBountyProgress('pomodoro', 1);
         }
 
         // Notify
@@ -2891,8 +2964,12 @@ pause
             if (avatarImg) avatarImg.style.display = 'none';
             if (avatarFallback) {
                 avatarFallback.style.display = 'flex';
-                const initial = (displayName || email || 'U').charAt(0).toUpperCase();
-                avatarFallback.textContent = initial;
+                if (this.activeAvatar) {
+                    avatarFallback.textContent = this.activeAvatar;
+                } else {
+                    const initial = (displayName || email || 'U').charAt(0).toUpperCase();
+                    avatarFallback.textContent = initial;
+                }
             }
         }
     }
@@ -3042,6 +3119,21 @@ pause
                         }
                         if (data.badges) {
                             this.userBadges = data.badges;
+                        }
+                        this.spentXP = data.spentXP || 0;
+                        this.unlockedItems = data.unlockedItems || { colors: [], avatars: [], borders: [] };
+                        this.activeAvatar = data.activeAvatar || '';
+                        this.activeBorder = data.activeBorder || '';
+                        this.friendsList = data.friends || [];
+
+                        localStorage.setItem('spentXP', this.spentXP);
+                        this.saveData('unlockedItems', this.unlockedItems);
+                        localStorage.setItem('activeAvatar', this.activeAvatar);
+                        localStorage.setItem('activeBorder', this.activeBorder);
+                        this.saveData('friendsList', this.friendsList);
+                        if (data.activeColor) {
+                            localStorage.setItem('accentColor', data.activeColor);
+                            this.applyTheme();
                         }
                         this.updateXPUI();
                         this.updateBadgeUI();
@@ -3552,7 +3644,7 @@ pause
     // دالة لتصفير بيانات التطبيق بالكامل محلياً
     clearAllLocalData() {
         // 1. مسح البيانات من الـ localStorage
-        const keysToClear = ['habits', 'tasks', 'playlists', 'pomodoroStats', 'motivationalSettings', 'userLevel', 'userXP'];
+        const keysToClear = ['habits', 'tasks', 'playlists', 'pomodoroStats', 'motivationalSettings', 'userLevel', 'userXP', 'spentXP', 'unlockedItems', 'activeAvatar', 'activeBorder', 'friendsList'];
         keysToClear.forEach(key => localStorage.removeItem(key));
 
         // 2. إعادة تعيين متغيرات التطبيق في الذاكرة لقيمها الافتراضية
@@ -3572,6 +3664,11 @@ pause
         };
         this.userLevel = 1;
         this.userXP = 0;
+        this.spentXP = 0;
+        this.unlockedItems = { colors: [], avatars: [], borders: [] };
+        this.activeAvatar = '';
+        this.activeBorder = '';
+        this.friendsList = [];
         this.userBadges = [];
         this.updateXPUI();
         this.updateBadgeUI();
@@ -3668,6 +3765,9 @@ pause
         if (scaleVideo && this.xpConfig) scaleVideo.value = this.xpConfig.video;
         if (scaleBase && this.xpConfig) scaleBase.value = this.xpConfig.levelBase;
 
+        const scaleBountyHours = document.getElementById('bountyExpireHours');
+        if (scaleBountyHours && this.xpConfig) scaleBountyHours.value = this.xpConfig.bountyExpireHours || 24;
+
         // Load active challenges
         this.loadAdminActiveChallenges();
     }
@@ -3744,6 +3844,7 @@ pause
                     role: data.role || 'user',
                     userLevel: data.userLevel || 1,
                     userXP: data.userXP || 0,
+                    spentXP: data.spentXP || 0,
                     status: data.status || 'active',
                     profilePicUrl: data.profilePicUrl || '',
                     lastActive: data.lastActive || '',
@@ -3869,6 +3970,10 @@ pause
                         <input type="number" class="admin-input" data-field="xp" value="${user.userXP}" min="0">
                     </div>
                     <div>
+                        <label class="admin-col-label">Spendable XP</label>
+                        <input type="number" class="admin-input" data-field="spendableXp" value="${Math.max(0, user.userXP - (user.spentXP || 0))}" min="0">
+                    </div>
+                    <div>
                         <label class="admin-col-label">Status</label>
                         <select class="admin-role-select" data-field="status" ${statusDisabled} style="text-transform: capitalize;">
                             <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
@@ -3947,12 +4052,15 @@ pause
         const statusSelect = row.querySelector('[data-field="status"]');
         const levelInput = row.querySelector('[data-field="level"]');
         const xpInput = row.querySelector('[data-field="xp"]');
+        const spendableXpInput = row.querySelector('[data-field="spendableXp"]');
         const saveBtn = row.querySelector('.admin-save-btn');
 
         const newRole = roleSelect ? roleSelect.value : 'user';
         const newStatus = statusSelect ? statusSelect.value : 'active';
         const newLevel = levelInput ? Math.max(1, parseInt(levelInput.value) || 1) : 1;
         const newXP = xpInput ? Math.max(0, parseInt(xpInput.value) || 0) : 0;
+        const newSpendableXp = spendableXpInput ? Math.max(0, parseInt(spendableXpInput.value) || 0) : 0;
+        const newSpentXp = Math.max(0, newXP - newSpendableXp);
 
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -3966,7 +4074,8 @@ pause
                 role: newRole,
                 status: newStatus,
                 userLevel: newLevel,
-                userXP: newXP
+                userXP: newXP,
+                spentXP: newSpentXp
             }, { merge: true });
 
             // Update row dataset status for filters
@@ -3976,9 +4085,12 @@ pause
             if (this.currentUser && uid === this.currentUser.uid) {
                 this.userLevel = newLevel;
                 this.userXP = newXP;
+                this.spentXP = newSpentXp;
                 localStorage.setItem('userLevel', newLevel);
                 localStorage.setItem('userXP', newXP);
+                localStorage.setItem('spentXP', newSpentXp);
                 this.updateXPUI();
+                this.updateBadgeUI();
             }
 
             const toast = document.createElement('div');
@@ -4034,6 +4146,7 @@ pause
         const pomodoroVal = parseInt(document.getElementById('xpScalePomodoro').value) || 150;
         const videoVal = parseInt(document.getElementById('xpScaleVideo').value) || 40;
         const baseVal = parseInt(document.getElementById('xpScaleBase').value) || 500;
+        const bountyHoursVal = parseInt(document.getElementById('bountyExpireHours').value) || 24;
 
         try {
             const { doc, setDoc } = window.firestoreUtils;
@@ -4043,7 +4156,8 @@ pause
                 pomodoro: pomodoroVal,
                 video: videoVal,
                 groupBonus: 200,
-                levelBase: baseVal
+                levelBase: baseVal,
+                bountyExpireHours: bountyHoursVal
             }, { merge: true });
 
             alert("Dynamic XP Scaling configurations updated globally!");
@@ -4330,7 +4444,8 @@ pause
                     pomodoro: data.pomodoro || 150,
                     video: data.video || 40,
                     groupBonus: data.groupBonus || 200,
-                    levelBase: data.levelBase || 500
+                    levelBase: data.levelBase || 500,
+                    bountyExpireHours: data.bountyExpireHours || 24
                 };
                 this.updateXPUI();
             }
@@ -4587,6 +4702,537 @@ pause
                 }
             });
         }
+    }
+
+    // ============================================
+    // DAILY BOUNTIES SYSTEM
+    // ============================================
+
+    checkAndResetDailyBounties(force = false) {
+        const now = new Date();
+        const dateStr = now.toDateString();
+        
+        let savedStats = this.loadData('bountyStats');
+        let savedBounties = this.loadData('dailyBounties');
+        
+        const expireHours = this.xpConfig?.bountyExpireHours || 24;
+        const expireMs = expireHours * 3600 * 1000;
+        
+        let shouldReset = force || !savedStats || savedStats.dateStr !== dateStr;
+        if (!shouldReset && savedStats && savedStats.generationTime) {
+            const elapsed = now.getTime() - savedStats.generationTime;
+            if (elapsed >= expireMs) {
+                shouldReset = true;
+            }
+        }
+        
+        if (shouldReset) {
+            this.bountyStats = {
+                pomodorosCompletedToday: 0,
+                habitsCompletedToday: 0,
+                tasksCompletedToday: 0,
+                dateStr: dateStr,
+                generationTime: now.getTime()
+            };
+            this.dailyBounties = [
+                { id: 'bounty_pomodoro', text: '🍅 Pomodoro Blitz: Complete a Focus Session today', reward: 300, completed: false, countNeeded: 1, currentCount: 0 },
+                { id: 'bounty_habits', text: '⚡ Habit Crease: Complete 3 habits today', reward: 200, completed: false, countNeeded: 3, currentCount: 0 },
+                { id: 'bounty_todo', text: '📝 Task Fold: Complete 2 checklist tasks today', reward: 150, completed: false, countNeeded: 2, currentCount: 0 }
+            ];
+            this.saveData('bountyStats', this.bountyStats);
+            this.saveData('dailyBounties', this.dailyBounties);
+        } else {
+            this.bountyStats = savedStats;
+            this.dailyBounties = savedBounties || [];
+        }
+    }
+
+    updateBountyCountdown() {
+        if (!this.bountyStats || !this.bountyStats.generationTime) return;
+        const now = new Date();
+        
+        const expireHours = this.xpConfig?.bountyExpireHours || 24;
+        const expireMs = expireHours * 3600 * 1000;
+        const expirationTime = this.bountyStats.generationTime + expireMs;
+        const diffMs = expirationTime - now.getTime();
+        
+        if (diffMs <= 0) {
+            this.checkAndResetDailyBounties(true);
+            return;
+        }
+        
+        const hours = Math.floor(diffMs / 3600000);
+        const minutes = Math.floor((diffMs % 3600000) / 60000);
+        const seconds = Math.floor((diffMs % 60000) / 1000);
+        
+        const pad = (num) => String(num).padStart(2, '0');
+        const el = document.getElementById('bountyCountdown');
+        if (el) {
+            el.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+    }
+
+    renderDailyBounties() {
+        const el = document.getElementById('dailyBountiesList');
+        if (!el) return;
+        
+        el.innerHTML = '';
+        if (this.dailyBounties.length === 0) {
+            el.innerHTML = '<p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); text-align: center; margin: 0;">No bounties active today.</p>';
+            return;
+        }
+        
+        this.dailyBounties.forEach(b => {
+            const item = document.createElement('div');
+            item.className = `bounty-item ${b.completed ? 'completed' : ''}`;
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <input type="checkbox" disabled ${b.completed ? 'checked' : ''} style="accent-color: var(--color-success); width: 16px; height: 16px;">
+                    <span class="bounty-title-text" style="color: var(--color-text-primary); font-size: var(--font-size-sm); font-weight: 600; ${b.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${b.text} (${b.currentCount}/${b.countNeeded})</span>
+                </div>
+                <span class="bounty-reward-badge" style="${b.completed ? 'opacity: 0.5;' : ''}">+${b.reward} XP</span>
+            `;
+            el.appendChild(item);
+        });
+    }
+
+    trackBountyProgress(type, amount = 1) {
+        this.checkAndResetDailyBounties();
+        
+        if (type === 'pomodoro') this.bountyStats.pomodorosCompletedToday += amount;
+        else if (type === 'habits') this.bountyStats.habitsCompletedToday += amount;
+        else if (type === 'tasks') this.bountyStats.tasksCompletedToday += amount;
+        
+        this.saveData('bountyStats', this.bountyStats);
+        
+        let changed = false;
+        this.dailyBounties.forEach(b => {
+            if (b.id === 'bounty_pomodoro') b.currentCount = this.bountyStats.pomodorosCompletedToday;
+            else if (b.id === 'bounty_habits') b.currentCount = this.bountyStats.habitsCompletedToday;
+            else if (b.id === 'bounty_todo') b.currentCount = this.bountyStats.tasksCompletedToday;
+            
+            if (b.currentCount >= b.countNeeded && !b.completed) {
+                b.completed = true;
+                changed = true;
+                this.gainXP(b.reward, `Bounty Completed: ${b.id}`);
+            }
+        });
+        
+        if (changed) {
+            this.saveData('dailyBounties', this.dailyBounties);
+        }
+        
+        if (this.currentPage === 'home') {
+            this.renderDailyBounties();
+        }
+    }
+
+    // ============================================
+    // AMBIENT FOCUS AUDIO PLAYER
+    // ============================================
+
+    toggleFocusAudio() {
+        const btn = document.getElementById('audioPlayPauseBtn');
+        if (!btn) return;
+        
+        if (this.focusAudioPlaying) {
+            this.focusAudio.pause();
+            this.focusAudioPlaying = false;
+            btn.textContent = '▶';
+            btn.classList.remove('active');
+        } else {
+            this.focusAudio.src = this.audioTracks[this.focusAudioTrack];
+            this.focusAudio.play().catch(err => console.error("Error playing ambience:", err));
+            this.focusAudioPlaying = true;
+            btn.textContent = '⏸️';
+            btn.classList.add('active');
+        }
+        this.syncFocusAudioUI();
+    }
+
+    setFocusAudioVolume(val) {
+        this.focusAudio.volume = parseFloat(val);
+    }
+
+    selectFocusAudioTrack(track) {
+        this.focusAudioTrack = track;
+        if (this.focusAudioPlaying) {
+            this.focusAudio.src = this.audioTracks[track];
+            this.focusAudio.play().catch(err => console.error("Error changing ambience track:", err));
+        }
+        this.syncFocusAudioUI();
+    }
+
+    syncFocusAudioUI() {
+        // Update track active class
+        ['lofi', 'rain', 'cafe'].forEach(t => {
+            const btn = document.getElementById(`track${t.charAt(0).toUpperCase() + t.slice(1)}`);
+            if (btn) {
+                if (this.focusAudioTrack === t) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }
+        });
+        
+        const btn = document.getElementById('audioPlayPauseBtn');
+        if (btn) {
+            btn.textContent = this.focusAudioPlaying ? '⏸️' : '▶';
+            if (this.focusAudioPlaying) btn.classList.add('active');
+            else btn.classList.remove('active');
+        }
+        
+        const slider = document.getElementById('audioVolumeSlider');
+        if (slider) {
+            slider.value = this.focusAudio.volume;
+        }
+    }
+
+    // ============================================
+    // VIRTUAL STORE & PROFILE CUSTOMIZATION
+    // ============================================
+
+    switchStoreTab(tab) {
+        this.currentStoreTab = tab;
+        ['colors', 'avatars', 'borders'].forEach(t => {
+            const btn = document.getElementById(`storeTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+            if (btn) {
+                if (t === tab) {
+                    btn.style.borderBottom = '3px solid var(--color-primary)';
+                    btn.style.color = 'var(--color-primary)';
+                } else {
+                    btn.style.borderBottom = '3px solid transparent';
+                    btn.style.color = 'var(--color-text-secondary)';
+                }
+            }
+        });
+        this.renderStore();
+    }
+
+    renderStore() {
+        const balanceEl = document.getElementById('storeBalanceText');
+        const gridEl = document.getElementById('storeGrid');
+        if (!gridEl) return;
+        
+        const spendableXP = Math.max(0, this.userXP - this.spentXP);
+        if (balanceEl) balanceEl.textContent = spendableXP;
+        
+        gridEl.innerHTML = '';
+        const items = this.storeItems[this.currentStoreTab] || [];
+        
+        items.forEach(item => {
+            const unlockedList = this.unlockedItems[this.currentStoreTab] || [];
+            const isUnlocked = unlockedList.includes(item.id);
+            
+            let isActive = false;
+            if (this.currentStoreTab === 'colors') {
+                isActive = (localStorage.getItem('accentColor') === item.value);
+            } else if (this.currentStoreTab === 'avatars') {
+                isActive = (this.activeAvatar === item.value);
+            } else if (this.currentStoreTab === 'borders') {
+                isActive = (this.activeBorder === item.value);
+            }
+            
+            let btnHtml = '';
+            let statusHtml = '';
+            
+            if (isActive) {
+                btnHtml = `<button class="btn-secondary" disabled style="width: 100%; cursor: default; font-weight: 700;">Applied</button>`;
+                statusHtml = `<span class="store-card-badge applied">Applied</span>`;
+            } else if (isUnlocked) {
+                btnHtml = `<button class="btn-primary" onclick="app.applyStoreItem('${this.currentStoreTab}', '${item.value}')" style="width: 100%; font-weight: 700; cursor: pointer;">Apply customize</button>`;
+                statusHtml = `<span class="store-card-badge purchased">Purchased</span>`;
+            } else {
+                const canAfford = spendableXP >= item.cost;
+                btnHtml = `<button class="btn-primary" onclick="app.buyStoreItem('${this.currentStoreTab}', '${item.id}', ${item.cost})" ${canAfford ? '' : 'disabled'} style="width: 100%; font-weight: 700; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; ${canAfford ? '' : 'opacity: 0.6;'}">Unlock: ${item.cost} XP</button>`;
+                statusHtml = `<span class="store-card-badge locked">Locked</span>`;
+            }
+            
+            const card = document.createElement('div');
+            card.className = `store-card ${isUnlocked ? 'unlocked' : ''} ${isActive ? 'active' : ''}`;
+            card.innerHTML = `
+                ${statusHtml}
+                <div style="font-size: 2.2rem; text-align: center; margin-top: 10px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                    ${this.currentStoreTab === 'colors' ? `<div style="width: 38px; height: 38px; border-radius: 50%; background: ${item.value}; border: 1.5px solid var(--color-border);"></div>` : item.value}
+                </div>
+                <div style="text-align: center;">
+                    <h3 style="font-family: var(--font-display); font-size: var(--font-size-md); font-weight: 700; margin: 0 0 4px 0;">${item.name}</h3>
+                    <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin: 0; line-height: 1.4; height: 36px; overflow: hidden;">${item.desc}</p>
+                </div>
+                <div style="margin-top: auto; padding-top: var(--spacing-sm);">
+                    ${btnHtml}
+                </div>
+            `;
+            gridEl.appendChild(card);
+        });
+    }
+
+    buyStoreItem(tab, itemId, cost) {
+        const spendableXP = Math.max(0, this.userXP - this.spentXP);
+        if (spendableXP < cost) {
+            alert("Not enough XP balance!");
+            return;
+        }
+        
+        this.spentXP += cost;
+        if (!this.unlockedItems[tab]) {
+            this.unlockedItems[tab] = [];
+        }
+        this.unlockedItems[tab].push(itemId);
+        
+        this.saveCustomizerState();
+        this.renderStore();
+        alert("Unlock successful!");
+    }
+
+    applyStoreItem(tab, val) {
+        if (tab === 'colors') {
+            localStorage.setItem('accentColor', val);
+            this.applyTheme();
+            if (this.currentUser && window.db && window.firestoreUtils) {
+                const { doc, setDoc } = window.firestoreUtils;
+                setDoc(doc(window.db, "users", this.currentUser.uid), { activeColor: val }, { merge: true }).catch(() => {});
+            }
+        } else if (tab === 'avatars') {
+            this.activeAvatar = val;
+            this.updateNavbarAvatar(this._cachedProfilePic, this.currentUser?.displayName, this.currentUser?.email);
+        } else if (tab === 'borders') {
+            this.activeBorder = val;
+            this.updateBadgeUI();
+        }
+        
+        this.saveCustomizerState();
+        this.renderStore();
+    }
+
+    saveCustomizerState() {
+        localStorage.setItem('spentXP', this.spentXP);
+        localStorage.setItem('unlockedItems', JSON.stringify(this.unlockedItems));
+        localStorage.setItem('activeAvatar', this.activeAvatar);
+        localStorage.setItem('activeBorder', this.activeBorder);
+        localStorage.setItem('friendsList', JSON.stringify(this.friendsList));
+
+        if (this.currentUser && window.db && window.firestoreUtils) {
+            const { doc, setDoc } = window.firestoreUtils;
+            const userRef = doc(window.db, "users", this.currentUser.uid);
+            setDoc(userRef, {
+                spentXP: this.spentXP,
+                unlockedItems: this.unlockedItems,
+                activeAvatar: this.activeAvatar,
+                activeBorder: this.activeBorder,
+                friends: this.friendsList
+            }, { merge: true }).catch(err => console.error("Error saving customization state to cloud:", err));
+        }
+    }
+
+    // ============================================
+    // HONOR SYSTEM & MONTHLY WRAP-UP
+    // ============================================
+
+    openMonthlyWrapUp() {
+        const modal = document.getElementById('monthlyWrapUpModal');
+        if (!modal) return;
+        
+        const totalFocusMin = this.pomodoroStats.totalFocusTime || 0;
+        const totalFocusHr = Math.round(totalFocusMin / 60);
+        const habitsKept = this.habits.reduce((acc, h) => acc + (h.progress ? h.progress.filter(Boolean).length : 0), 0);
+        const tasksFinished = this.tasks.filter(t => t.completed).length;
+        
+        const xpGained = (this.userLevel - 1) * 500 + this.userXP;
+        
+        document.getElementById('wrapUpFocusTime').textContent = `${totalFocusHr}h`;
+        document.getElementById('wrapUpHabitsKept').textContent = habitsKept;
+        document.getElementById('wrapUpTasksDone').textContent = tasksFinished;
+        document.getElementById('wrapUpXPGained').textContent = `${xpGained} XP`;
+        
+        let honorStatus = "Bronze Origami Seedling 🌱 - Shaping your routine creases!";
+        if (habitsKept + tasksFinished + totalFocusHr > 20) {
+            honorStatus = "Gold Origami Crane 🕊️ - Master Consistency!";
+        } else if (habitsKept + tasksFinished + totalFocusHr > 8) {
+            honorStatus = "Silver Origami Frog 🐸 - Steady Progress!";
+        }
+        
+        document.getElementById('wrapUpHonorStatus').textContent = honorStatus;
+        
+        modal.classList.add('active');
+    }
+
+    // ============================================
+    // COMMUNITY LEADERBOARD & FRIENDS
+    // ============================================
+
+    async renderCommunity() {
+        const leaderboardList = document.getElementById('leaderboardList');
+        const friendsList = document.getElementById('friendsList');
+        if (!leaderboardList || !friendsList) return;
+        
+        leaderboardList.innerHTML = '<div class="admin-loading" style="padding: var(--spacing-lg);">Loading Top Achievers...</div>';
+        friendsList.innerHTML = '<div class="admin-loading" style="padding: var(--spacing-lg);">Loading Friends Camp...</div>';
+        
+        try {
+            let sortedUsers = [];
+            if (window.db && window.firestoreUtils) {
+                const { collection, getDocs } = window.firestoreUtils;
+                const snapshot = await getDocs(collection(window.db, "users"));
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    sortedUsers.push({
+                        uid: docSnap.id,
+                        displayName: data.displayName || data.username || "Anonymous Folder",
+                        userLevel: data.userLevel || 1,
+                        userXP: data.userXP || 0,
+                        avatar: data.activeAvatar || '🌱'
+                    });
+                });
+            }
+            
+            if (sortedUsers.length === 0) {
+                sortedUsers = [
+                    { uid: 'mock1', displayName: 'Fold Master 🏆', userLevel: 12, userXP: 340, avatar: '🕊️' },
+                    { uid: 'mock2', displayName: 'Morning Light 🌅', userLevel: 8, userXP: 210, avatar: '🦊' },
+                    { uid: 'mock3', displayName: 'Pomodoro King 🍅', userLevel: 7, userXP: 150, avatar: '🐸' },
+                    { uid: this.currentUser?.uid || 'curr', displayName: this.currentUser?.displayName || 'You', userLevel: this.userLevel, userXP: this.userXP, avatar: this.activeAvatar || '🌱' }
+                ];
+            }
+            
+            sortedUsers.sort((a, b) => {
+                if (b.userLevel !== a.userLevel) return b.userLevel - a.userLevel;
+                return b.userXP - a.userXP;
+            });
+            
+            leaderboardList.innerHTML = '';
+            sortedUsers.forEach((u, idx) => {
+                const rank = idx + 1;
+                let rankClass = 'normal';
+                let rankText = rank;
+                if (rank === 1) { rankClass = 'first'; rankText = '🥇'; }
+                else if (rank === 2) { rankClass = 'second'; rankText = '🥈'; }
+                else if (rank === 3) { rankClass = 'third'; rankText = '🥉'; }
+                
+                const isCurrent = (u.uid === this.currentUser?.uid);
+                
+                const row = document.createElement('div');
+                row.className = `leaderboard-row ${isCurrent ? 'current-user' : ''}`;
+                row.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <span class="rank-badge ${rankClass}">${rankText}</span>
+                        <span style="font-size: 1.25rem;">${u.avatar}</span>
+                        <span style="font-weight: 700; font-size: var(--font-size-sm); color: var(--color-text-primary);">${u.displayName}</span>
+                    </div>
+                    <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-primary);">Lvl ${u.userLevel} (${u.userXP} XP)</div>
+                `;
+                leaderboardList.appendChild(row);
+            });
+            
+        } catch (err) {
+            console.error("Leaderboard error:", err);
+            leaderboardList.innerHTML = '<p style="font-size: var(--font-size-sm); color: var(--color-danger); text-align: center;">Failed to load leaderboard ranking.</p>';
+        }
+        
+        this.renderFriendsCamp();
+    }
+
+    async renderFriendsCamp() {
+        const friendsList = document.getElementById('friendsList');
+        if (!friendsList) return;
+        
+        friendsList.innerHTML = '';
+        if (this.friendsList.length === 0) {
+            friendsList.innerHTML = '<p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); text-align: center; margin: auto;">No friends added yet. Enter a username above to start competing!</p>';
+            return;
+        }
+        
+        try {
+            if (window.db && window.firestoreUtils) {
+                const { doc, getDoc } = window.firestoreUtils;
+                for (const friendUid of this.friendsList) {
+                    const friendRef = doc(window.db, "users", friendUid);
+                    const friendSnap = await getDoc(friendRef);
+                    if (friendSnap.exists()) {
+                        const data = friendSnap.data();
+                        
+                        const row = document.createElement('div');
+                        row.className = 'friend-row';
+                        row.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                                <span style="font-size: 1.25rem;">${data.activeAvatar || '🌱'}</span>
+                                <div>
+                                    <div style="font-weight: 700; font-size: var(--font-size-sm); color: var(--color-text-primary);">${data.displayName || data.username || 'Friend'}</div>
+                                    <div style="font-size: 10px; color: var(--color-text-secondary); font-weight: 600;">Level ${data.userLevel || 1} • Streak: ${data.pomodoroStats?.currentStreak || 0}🍅</div>
+                                </div>
+                            </div>
+                            <button class="btn-icon" onclick="app.removeFriend('${friendUid}')" title="Remove Friend" style="color: var(--color-danger); padding: 4px; font-size: var(--font-size-sm); border: none; background: transparent; cursor: pointer;">
+                                &times;
+                            </button>
+                        `;
+                        friendsList.appendChild(row);
+                    }
+                }
+            } else {
+                friendsList.innerHTML = '<p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); text-align: center;">Connect to Firebase online to sync friends.</p>';
+            }
+        } catch (err) {
+            console.error("Friends load error:", err);
+            friendsList.innerHTML = '<p style="font-size: var(--font-size-xs); color: var(--color-danger); text-align: center;">Failed to load friends camp.</p>';
+        }
+    }
+
+    async handleAddFriend(e) {
+        if (e) e.preventDefault();
+        const input = document.getElementById('friendUsernameInput');
+        const msgEl = document.getElementById('friendAddMsg');
+        if (!input || !msgEl) return;
+        
+        const username = input.value.trim();
+        if (!username) return;
+        
+        msgEl.textContent = 'Searching...';
+        msgEl.style.color = 'var(--color-text-secondary)';
+        
+        try {
+            if (window.db && window.firestoreUtils) {
+                const { doc, getDoc } = window.firestoreUtils;
+                const usernameRef = doc(window.db, "usernames", username.toLowerCase());
+                const snap = await getDoc(usernameRef);
+                
+                if (snap.exists()) {
+                    const friendUid = snap.data().uid;
+                    
+                    if (friendUid === this.currentUser?.uid) {
+                        msgEl.textContent = "You cannot add yourself!";
+                        msgEl.style.color = 'var(--color-danger)';
+                        return;
+                    }
+                    
+                    if (this.friendsList.includes(friendUid)) {
+                        msgEl.textContent = "This friend is already added!";
+                        msgEl.style.color = 'var(--color-warning)';
+                        return;
+                    }
+                    
+                    this.friendsList.push(friendUid);
+                    this.saveCustomizerState();
+                    msgEl.textContent = "Friend added successfully!";
+                    msgEl.style.color = 'var(--color-success)';
+                    input.value = '';
+                    this.renderFriendsCamp();
+                } else {
+                    msgEl.textContent = "Username not found.";
+                    msgEl.style.color = 'var(--color-danger)';
+                }
+            } else {
+                msgEl.textContent = "Database offline.";
+                msgEl.style.color = 'var(--color-danger)';
+            }
+        } catch (err) {
+            console.error("Add friend error:", err);
+            msgEl.textContent = "Error adding friend.";
+            msgEl.style.color = 'var(--color-danger)';
+        }
+    }
+
+    removeFriend(friendUid) {
+        this.friendsList = this.friendsList.filter(id => id !== friendUid);
+        this.saveCustomizerState();
+        this.renderFriendsCamp();
     }
 }
 
