@@ -2627,6 +2627,10 @@ pause
                 }, 300);
             }
 
+            // Cache user photo URL and show avatar on navbar immediately
+            this._cachedProfilePic = user.photoURL || null;
+            this.updateNavbarAvatar(this._cachedProfilePic, user.displayName, user.email);
+
             // 1. تصفير البيانات المحلية فوراً قبل تحميل بيانات الحساب الجديد (لمنع التسريب)
             this.clearAllLocalData();
 
@@ -2654,6 +2658,12 @@ pause
 
                     if (docSnap.exists()) {
                         const data = docSnap.data();
+
+                        // Load profile picture from Firestore if exists
+                        if (data.profilePicUrl) {
+                            this._cachedProfilePic = data.profilePicUrl;
+                            this.updateNavbarAvatar(this._cachedProfilePic, user.displayName, user.email);
+                        }
 
                         // تحميل البيانات من السيرفر للذاكرة وللـ localStorage
                         if (data.habits) {
@@ -2696,6 +2706,13 @@ pause
                 if (card) card.style.display = 'block';
             }
 
+            // Clear cached profile pic and update navbar avatar
+            this._cachedProfilePic = null;
+            this.updateNavbarAvatar(null, null, null);
+
+            // Clear login/signup input fields and messages
+            this.clearAuthInputs();
+
             // لو المستخدم سجل خروج، بنظف الـ localStorage تماماً عشان يرجع anonymous نضيف
             this.clearAllLocalData();
 
@@ -2703,6 +2720,51 @@ pause
             if (userMenuWrapper) {
                 userMenuWrapper.style.display = 'none';
             }
+        }
+    }
+
+    clearAuthInputs() {
+        const inputs = [
+            'overlayUsernameInput',
+            'overlayEmailInput',
+            'overlayPasswordInput',
+            'usernameInput',
+            'emailInput',
+            'passwordInput'
+        ];
+        inputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = '';
+            }
+        });
+
+        const messages = [
+            'overlayAuthMessage',
+            'authMessage'
+        ];
+        messages.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = 'none';
+                el.textContent = '';
+                el.className = 'auth-message';
+            }
+        });
+
+        // Reset submit buttons states
+        const overlaySubmitAuthBtn = document.getElementById('overlaySubmitAuthBtn');
+        const overlayAuthSubmitText = document.getElementById('overlayAuthSubmitText');
+        if (overlaySubmitAuthBtn) overlaySubmitAuthBtn.disabled = false;
+        if (overlayAuthSubmitText) {
+            overlayAuthSubmitText.textContent = this.overlayAuthMode === 'signup' ? 'Create Account' : 'Sign In';
+        }
+
+        const submitAuthBtn = document.getElementById('submitAuthBtn');
+        const authSubmitText = document.getElementById('authSubmitText');
+        if (submitAuthBtn) submitAuthBtn.disabled = false;
+        if (authSubmitText) {
+            authSubmitText.textContent = this.authMode === 'signup' ? 'Create Account' : 'Sign In';
         }
     }
 
