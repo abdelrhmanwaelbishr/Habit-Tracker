@@ -3213,8 +3213,8 @@ body.dark-theme .auth-overlay {
 }
 
 .auth-overlay-brand-icon {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3261,6 +3261,7 @@ body.dark-theme .auth-overlay {
         transform: scale(0.95) translateY(10px);
         opacity: 0;
     }
+
     to {
         transform: scale(1) translateY(0);
         opacity: 1;
@@ -3268,6 +3269,11 @@ body.dark-theme .auth-overlay {
 }
 
 @keyframes authOverlaySpin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
