@@ -1,10 +1,6 @@
 {
 	"folders": [
 		{
-			"name": ".agent",
-			"path": "../Habit Tracker_old/.agent"
-		},
-		{
 			"name": "Habit-Tracker",
 			"path": "."
 		}
