@@ -1,8 +1,9 @@
 :root {
     /* Color Palette - Active Morning ☀️ */
-    --color-primary: #0EA5A0;
-    --color-primary-light: #2DD4BF;
-    --color-primary-dark: #0D8F8A;
+    --color-primary: #0F172A;
+    --color-primary-light: #334155;
+    --color-primary-dark: #000000;
+    --color-primary-contrast: #FFFFFF;
 
     --color-secondary: #38BDF8;
     --color-secondary-light: #7DD3FC;
@@ -79,6 +80,11 @@
 
 /* Dark Theme */
 body.dark-theme {
+    --color-primary: #FFFFFF;
+    --color-primary-light: #F1F5F9;
+    --color-primary-dark: #CBD5E1;
+    --color-primary-contrast: #0F172A;
+
     --color-bg: #0F172A;
     --color-surface: #1E293B;
     --color-border: #334155;
@@ -114,6 +120,8 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+
+
 
 /* Navigation Bar */
 .main-nav {

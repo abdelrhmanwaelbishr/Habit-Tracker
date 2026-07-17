@@ -345,24 +345,26 @@ class ProductivityHub {
 
     applyTheme() {
         const theme = localStorage.getItem('theme') || 'light';
-        if (theme === 'dark') {
+        const isDark = theme === 'dark';
+        if (isDark) {
             document.body.classList.add('dark-theme');
+        } else {
+            document.body.classList.remove('dark-theme');
         }
 
         let accentColor = localStorage.getItem('accentColor');
-        if (accentColor === '#10B981' || accentColor === '#FF6B35') {
-            accentColor = '#0EA5A0';
-            localStorage.setItem('accentColor', '#0EA5A0');
+        // Reset legacy defaults/yellows to the new Black/White theme defaults
+        if (!accentColor || accentColor === '#10B981' || accentColor === '#FF6B35' || accentColor === '#F59E0B' || accentColor === '#0EA5A0' || accentColor === '#FDE68A' || accentColor === '#FBBF24') {
+            accentColor = isDark ? '#FFFFFF' : '#000000';
+            localStorage.setItem('accentColor', accentColor);
         }
-        if (accentColor) {
-            const isDark = theme === 'dark';
-            if (isDark && accentColor === '#0F172A') {
-                this.setAccentColor('#0EA5A0');
-            } else if (!isDark && accentColor === '#FFFFFF') {
-                this.setAccentColor('#0EA5A0');
-            } else {
-                this.setAccentColor(accentColor);
-            }
+
+        if (isDark && accentColor === '#000000') {
+            this.setAccentColor('#FFFFFF');
+        } else if (!isDark && accentColor === '#FFFFFF') {
+            this.setAccentColor('#000000');
+        } else {
+            this.setAccentColor(accentColor);
         }
     }
 
@@ -372,10 +374,16 @@ class ProductivityHub {
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
         const accentColor = localStorage.getItem('accentColor');
-        if (isDark && accentColor === '#0F172A') {
-            this.setAccentColor('#0EA5A0');
-        } else if (!isDark && accentColor === '#FFFFFF') {
-            this.setAccentColor('#0EA5A0');
+        if (!accentColor) {
+            this.setAccentColor(isDark ? '#FFFFFF' : '#000000');
+        } else {
+            if (isDark && accentColor === '#000000') {
+                this.setAccentColor('#FFFFFF');
+            } else if (!isDark && accentColor === '#FFFFFF') {
+                this.setAccentColor('#000000');
+            } else {
+                this.setAccentColor(accentColor);
+            }
         }
 
         this.renderAccentDropdowns();
@@ -407,7 +415,7 @@ class ProductivityHub {
         if (!dropdown) return;
 
         const isDark = document.body.classList.contains('dark-theme');
-        const savedColor = localStorage.getItem('accentColor') || '#0EA5A0';
+        const savedColor = localStorage.getItem('accentColor') || (isDark ? '#FFFFFF' : '#000000');
 
         const allOptions = [
             { name: 'Teal', hex: '#0EA5A0' },
@@ -415,7 +423,7 @@ class ProductivityHub {
             { name: 'Sunrise', hex: '#F59E0B' },
             { name: 'Purple', hex: '#8A2BE2' },
             { name: 'White', hex: '#FFFFFF', darkOnly: true },
-            { name: 'Slate', hex: '#0F172A', lightOnly: true }
+            { name: 'Black', hex: '#000000', lightOnly: true }
         ];
 
         const options = allOptions.filter(opt => {
