@@ -694,6 +694,7 @@ class ProductivityHub {
 
                 this.setupSettingsEventListeners();
                 this.renderUserBadges();
+                this.renderSettingsMonthlyWrapUp();
                 break;
             case 'admin':
                 if (this.userRole !== 'admin') {
@@ -3156,6 +3157,12 @@ pause
                         this.updateXPUI();
                         this.updateBadgeUI();
 
+                        if (data.financeData) {
+                            this.financeData = data.financeData;
+                            this.saveData('financeData', this.financeData);
+                            this.checkYesterdayFinanceXP();
+                        }
+
                         // Load user role (RBAC)
                         if (data.role) {
                             this.userRole = data.role;
@@ -5048,10 +5055,7 @@ pause
     // HONOR SYSTEM & MONTHLY WRAP-UP
     // ============================================
 
-    openMonthlyWrapUp() {
-        const modal = document.getElementById('monthlyWrapUpModal');
-        if (!modal) return;
-        
+    renderSettingsMonthlyWrapUp() {
         const totalFocusMin = this.pomodoroStats.totalFocusTime || 0;
         const totalFocusHr = Math.round(totalFocusMin / 60);
         const habitsKept = this.habits.reduce((acc, h) => acc + (h.progress ? h.progress.filter(Boolean).length : 0), 0);
@@ -5059,10 +5063,16 @@ pause
         
         const xpGained = (this.userLevel - 1) * 500 + this.userXP;
         
-        document.getElementById('wrapUpFocusTime').textContent = `${totalFocusHr}h`;
-        document.getElementById('wrapUpHabitsKept').textContent = habitsKept;
-        document.getElementById('wrapUpTasksDone').textContent = tasksFinished;
-        document.getElementById('wrapUpXPGained').textContent = `${xpGained} XP`;
+        const focusEl = document.getElementById('wrapUpFocusTime');
+        const habitsEl = document.getElementById('wrapUpHabitsKept');
+        const tasksEl = document.getElementById('wrapUpTasksDone');
+        const xpEl = document.getElementById('wrapUpXPGained');
+        const honorEl = document.getElementById('wrapUpHonorStatus');
+
+        if (focusEl) focusEl.textContent = `${totalFocusHr}h`;
+        if (habitsEl) habitsEl.textContent = habitsKept;
+        if (tasksEl) tasksEl.textContent = tasksFinished;
+        if (xpEl) xpEl.textContent = `${xpGained} XP`;
         
         let honorStatus = "Bronze Origami Seedling 🌱 - Shaping your routine creases!";
         if (habitsKept + tasksFinished + totalFocusHr > 20) {
@@ -5071,9 +5081,7 @@ pause
             honorStatus = "Silver Origami Frog 🐸 - Steady Progress!";
         }
         
-        document.getElementById('wrapUpHonorStatus').textContent = honorStatus;
-        
-        modal.classList.add('active');
+        if (honorEl) honorEl.textContent = honorStatus;
     }
 
     // ============================================
@@ -5256,9 +5264,15 @@ pause
         this.renderFriendsCamp();
     }
 
-    // ============================================
-    // FINANCIAL TRACKER MODULE
-    // ============================================
+    saveFinanceData() {
+        this.saveData('financeData', this.financeData);
+        if (this.currentUser && window.db && window.firestoreUtils) {
+            const { doc, setDoc } = window.firestoreUtils;
+            setDoc(doc(window.db, "users", this.currentUser.uid), {
+                financeData: this.financeData
+            }, { merge: true }).catch(err => console.error("Error saving finance data to firestore:", err));
+        }
+    }
 
     initFinancePage() {
         const currentMonthYear = new Date().toISOString().substring(0, 7); // YYYY-MM
@@ -5270,9 +5284,13 @@ pause
                 monthlyIncome: 0,
                 dailyBudget: 0,
                 expenses: [],
-                xpBonusClaimedDates: {}
+                xpBonusClaimedDates: {},
+                categories: this.financeData.categories || ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'],
+                currency: 'EGP',
+                savingsBalance: 0,
+                savingsGoals: []
             };
-            this.saveData('financeData', this.financeData);
+            this.saveFinanceData();
         }
 
         const setupContainer = document.getElementById('financeSetupContainer');
@@ -5285,6 +5303,12 @@ pause
             setupContainer.style.display = 'block';
             dashboardContainer.style.display = 'none';
             headerActions.style.display = 'none';
+            
+            // Set starting date picker default to today
+            const dateInput = document.getElementById('financeStartDateInput');
+            if (dateInput) {
+                dateInput.value = new Date().toISOString().substring(0, 10);
+            }
         } else {
             setupContainer.style.display = 'none';
             dashboardContainer.style.display = 'block';
@@ -5297,25 +5321,36 @@ pause
     handleFinanceSetup(event) {
         if (event) event.preventDefault();
         const incomeInput = document.getElementById('financeIncomeInput');
-        if (!incomeInput) return;
+        const startDateInput = document.getElementById('financeStartDateInput');
+        const currencySelect = document.getElementById('financeCurrencySelect');
+        if (!incomeInput || !startDateInput || !currencySelect) return;
 
         const income = parseFloat(incomeInput.value);
         if (isNaN(income) || income <= 0) return;
 
-        const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const dailyBudget = parseFloat((income / daysInMonth).toFixed(2));
+        const startDateVal = startDateInput.value;
+        const currencyVal = currencySelect.value || 'EGP';
+
+        // Calculate remaining days in month from the selected starting entry date
+        const entryDateObj = new Date(startDateVal);
+        const lastDayOfMonthObj = new Date(entryDateObj.getFullYear(), entryDateObj.getMonth() + 1, 0);
+        const remainingDays = lastDayOfMonthObj.getDate() - entryDateObj.getDate() + 1; // inclusive
+        const dailyBudget = parseFloat((income / Math.max(1, remainingDays)).toFixed(2));
 
         this.financeData.monthlyIncome = income;
         this.financeData.dailyBudget = dailyBudget;
-        this.financeData.monthYear = now.toISOString().substring(0, 7);
+        this.financeData.monthYear = startDateVal.substring(0, 7);
+        this.financeData.startingDate = startDateVal;
+        this.financeData.currency = currencyVal;
         this.financeData.expenses = [];
         this.financeData.xpBonusClaimedDates = {};
+        this.financeData.savingsBalance = 0;
+        this.financeData.savingsGoals = [];
 
         const defaults = this.loadData('adminDefaultCategories') || ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'];
         this.financeData.categories = [...defaults];
 
-        this.saveData('financeData', this.financeData);
+        this.saveFinanceData();
         this.switchPage('finance');
     }
 
@@ -5355,31 +5390,38 @@ pause
         if (event) event.preventDefault();
 
         const nameInput = document.getElementById('expenseNameInput');
+        const descInput = document.getElementById('expenseDescInput');
         const amountInput = document.getElementById('expenseAmountInput');
+        const dateInput = document.getElementById('expenseDateInput');
         const catInput = document.getElementById('selectedExpenseCategory');
 
-        if (!nameInput || !amountInput || !catInput) return;
+        if (!nameInput || !descInput || !amountInput || !dateInput || !catInput) return;
 
         const name = nameInput.value.trim();
+        const description = descInput.value.trim();
         const amount = parseFloat(amountInput.value);
+        const purchaseDate = dateInput.value || new Date().toISOString().substring(0, 10);
         const category = catInput.value || 'General';
 
-        if (!name || isNaN(amount) || amount <= 0) return;
+        if (!name || !description || isNaN(amount) || amount <= 0) return;
 
         const expense = {
             id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             name: name,
+            description: description,
             amount: amount,
             category: category,
-            date: new Date().toISOString()
+            date: new Date(purchaseDate).toISOString()
         };
 
         this.financeData.expenses.push(expense);
-        this.saveData('financeData', this.financeData);
+        this.saveFinanceData();
 
         // Reset fields
         nameInput.value = '';
+        descInput.value = '';
         amountInput.value = '';
+        dateInput.value = new Date().toISOString().substring(0, 10);
         catInput.value = '';
         
         // Remove active class from buttons
@@ -5458,8 +5500,15 @@ pause
             }).join('');
         }
 
+        // Set default value for new purchase log date to today
+        const expDateInput = document.getElementById('expenseDateInput');
+        if (expDateInput && !expDateInput.value) {
+            expDateInput.value = new Date().toISOString().substring(0, 10);
+        }
+
         const income = this.financeData.monthlyIncome;
         const dailyLimit = this.financeData.dailyBudget;
+        const currency = this.financeData.currency || 'EGP';
 
         // Calculate spends
         const todayDateStr = new Date().toDateString();
@@ -5470,11 +5519,46 @@ pause
         const remainingBalance = income - totalSpent;
 
         // Render standard values
-        monthlyBudgetVal.textContent = `$${income.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        dailyLimitVal.textContent = `$${dailyLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        todaySpentVal.textContent = `$${todaySpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        totalSpentText.textContent = `$${totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        remainingText.textContent = `$${remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        monthlyBudgetVal.textContent = `${currency} ${income.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        dailyLimitVal.textContent = `${currency} ${dailyLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        todaySpentVal.textContent = `${currency} ${todaySpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        totalSpentText.textContent = `${currency} ${totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        remainingText.textContent = `${currency} ${remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // Render Savings Vault Value
+        const vaultVal = document.getElementById('financeSavingsVaultVal');
+        if (vaultVal) {
+            const savingsBal = this.financeData.savingsBalance || 0;
+            vaultVal.textContent = `${currency} ${savingsBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Render Savings Goal Planner progress bar
+        const goalContainer = document.getElementById('financeActiveGoalContainer');
+        if (goalContainer) {
+            if (this.financeData.activeGoal) {
+                const goal = this.financeData.activeGoal;
+                const savingsBal = this.financeData.savingsBalance || 0;
+                const progressPct = goal.target > 0 ? Math.min(100, Math.round((savingsBal / goal.target) * 100)) : 0;
+                const remainingAmt = Math.max(0, goal.target - savingsBal);
+                const monthlySaving = goal.target / goal.duration;
+                const weeklySaving = goal.target / (goal.duration * 4.33);
+                const dailySaving = goal.target / (goal.duration * 30.4);
+
+                goalContainer.style.display = 'block';
+                document.getElementById('financeActiveGoalName').textContent = `Active Goal: ${goal.name}`;
+                document.getElementById('financeActiveGoalProgressPct').textContent = `${progressPct}%`;
+                document.getElementById('financeActiveGoalProgressBar').style.width = `${progressPct}%`;
+                document.getElementById('financeActiveGoalStatus').innerHTML = `
+                    Saved <strong>${currency} ${savingsBal.toLocaleString()}</strong> of <strong>${currency} ${goal.target.toLocaleString()}</strong> (Target: ${goal.duration} months).<br>
+                    <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--color-border-light); font-size: 11px; color: var(--color-text-secondary);">
+                        <div><strong>Remaining:</strong> ${currency} ${remainingAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div><strong>Required Savings:</strong> ${currency} ${dailySaving.toFixed(2)}/day • ${currency} ${weeklySaving.toFixed(2)}/week • ${currency} ${monthlySaving.toFixed(2)}/month</div>
+                    </div>
+                `;
+            } else {
+                goalContainer.style.display = 'none';
+            }
+        }
 
         // Today's limit card color indication
         const todaySpentCard = document.getElementById('financeTodaySpentCard');
@@ -5526,14 +5610,14 @@ pause
                     return day + (s[(v - 20) % 10] || s[v] || s[0]);
                 };
                 alertBanner.className = 'finance-alert warning';
-                alertBanner.innerHTML = `⚠️ <div><strong>Early Depletion Risk!</strong> At your current velocity of <strong>$${avgDailySpend.toFixed(2)}/day</strong> (vs recommended $${dailyLimit.toFixed(2)}/day), you are on track to deplete all funds by the <strong>${suffix(depDayInt)}</strong> of the month.</div>`;
+                alertBanner.innerHTML = `⚠️ <div><strong>Early Depletion Risk!</strong> At your current velocity of <strong>${currency} ${avgDailySpend.toFixed(2)}/day</strong> (vs recommended ${currency} ${dailyLimit.toFixed(2)}/day), you are on track to deplete all funds by the <strong>${suffix(depDayInt)}</strong> of the month.</div>`;
             } else {
                 alertBanner.className = 'finance-alert success';
-                alertBanner.innerHTML = `✅ <div><strong>On Track!</strong> Your remaining balance of $${remainingBalance.toFixed(2)} is healthy and will last until the end of the month.</div>`;
+                alertBanner.innerHTML = `✅ <div><strong>On Track!</strong> Your remaining balance of ${currency} ${remainingBalance.toFixed(2)} is healthy and will last until the end of the month.</div>`;
             }
         } else {
             alertBanner.className = 'finance-alert success';
-            alertBanner.innerHTML = `✅ <div><strong>Safe Spending!</strong> Your average spending of <strong>$${avgDailySpend.toFixed(2)}/day</strong> is under the recommended limit. You are on track to finish the month with a surplus of <strong>$${remainingBalance.toFixed(2)}</strong>!</div>`;
+            alertBanner.innerHTML = `✅ <div><strong>Safe Spending!</strong> Your average spending of <strong>${currency} ${avgDailySpend.toFixed(2)}/day</strong> is under the recommended limit. You are on track to finish the month with a surplus of <strong>${currency} ${remainingBalance.toFixed(2)}</strong>!</div>`;
         }
 
         // Gamification Reward section
@@ -5547,7 +5631,7 @@ pause
                 claimBtn.style.cursor = 'not-allowed';
             }
         } else if (todaySpent > dailyLimit) {
-            xpRewardStatusText.textContent = `❌ Daily limit exceeded ($${todaySpent.toFixed(2)} / $${dailyLimit.toFixed(2)}).`;
+            xpRewardStatusText.textContent = `❌ Daily limit exceeded (${currency} ${todaySpent.toFixed(2)} / ${currency} ${dailyLimit.toFixed(2)}).`;
             xpRewardStatusText.style.color = 'var(--color-danger)';
             if (claimBtn) {
                 claimBtn.textContent = 'Limit Exceeded';
@@ -5587,11 +5671,12 @@ pause
                     row.className = 'expense-row';
 
                     const dateObj = new Date(exp.date);
-                    const dateFormatted = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const dateFormatted = `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
+                    const detailsStr = exp.description ? ` <span style="font-size: 11px; font-weight: normal; color: var(--color-text-secondary); margin-left: 4px;">- ${this.escapeHtml(exp.description)}</span>` : '';
 
                     row.innerHTML = `
                         <div class="expense-details">
-                            <span class="expense-name">${this.escapeHtml(exp.name)}</span>
+                            <span class="expense-name">${this.escapeHtml(exp.name)}${detailsStr}</span>
                             <div class="expense-meta">
                                 <span class="expense-tag">${this.escapeHtml(exp.category)}</span>
                                 <span>•</span>
@@ -5599,7 +5684,7 @@ pause
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: var(--spacing-md);">
-                            <span class="expense-amount">$${exp.amount.toFixed(2)}</span>
+                            <span class="expense-amount">${currency} ${exp.amount.toFixed(2)}</span>
                             <button class="btn-icon" onclick="app.deleteExpense('${exp.id}')" title="Delete purchase log" style="color: var(--color-danger); padding: 4px; border: none; background: transparent; cursor: pointer; font-size: 1.25rem;">
                                 &times;
                             </button>
@@ -5722,6 +5807,29 @@ pause
             totalExpensesEl.textContent = `$${totalExpensesAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             totalTransactionsEl.textContent = totalExpensesCount;
         }
+
+        // 4. Load users select dropdown for financial inspection
+        const userSelect = document.getElementById('adminFinanceUserSelect');
+        if (userSelect && window.db && window.firestoreUtils) {
+            const { collection, getDocs } = window.firestoreUtils;
+            try {
+                const snapshot = await getDocs(collection(window.db, "users"));
+                userSelect.innerHTML = '<option value="">-- Select Registered User --</option>';
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const displayName = data.displayName || data.username || docSnap.id;
+                    userSelect.innerHTML += `<option value="${docSnap.id}">${this.escapeHtml(displayName)} (${docSnap.id.substring(0, 6)}...)</option>`;
+                });
+            } catch (err) {
+                console.error("Error loading users selection registry:", err);
+            }
+        }
+
+        // If there was a previously inspected user, reload it
+        if (this.activeAdminInspectedUser && userSelect) {
+            userSelect.value = this.activeAdminInspectedUser;
+            this.inspectUserFinance(this.activeAdminInspectedUser);
+        }
     }
 
     renderAdminFinanceCategories() {
@@ -5780,6 +5888,545 @@ pause
         } catch (err) {
             console.error("Error saving dynamic finance scaling settings:", err);
             alert("Failed to save scaling configurations.");
+        }
+    }
+
+    // Prompt-based Add Funds from Stat Card
+    showAddFundsPrompt() {
+        const currency = this.financeData.currency || 'EGP';
+        const amountStr = prompt(`Enter amount to add to your monthly budget (${currency}):`);
+        if (!amountStr) return;
+
+        const amount = parseFloat(amountStr);
+        if (isNaN(amount) || amount <= 0) {
+            alert("Invalid amount entered.");
+            return;
+        }
+
+        this.financeData.monthlyIncome += amount;
+
+        // Recalculate dailyBudget using remaining days in the month from today
+        const now = new Date();
+        const lastDayOfMonthObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const remainingDays = lastDayOfMonthObj.getDate() - now.getDate() + 1; // inclusive of today
+
+        const totalSpent = this.financeData.expenses.reduce((sum, e) => sum + e.amount, 0);
+        const remainingBalance = this.financeData.monthlyIncome - totalSpent;
+        this.financeData.dailyBudget = parseFloat((remainingBalance / Math.max(1, remainingDays)).toFixed(2));
+
+        this.saveFinanceData();
+        this.renderFinanceDashboard();
+        alert(`Successfully injected ${currency} ${amount.toFixed(2)} into your monthly budget!`);
+    }
+
+    // Mid-Month Add Funds
+    handleAddFunds(event) {
+        if (event) event.preventDefault();
+        const amountInput = document.getElementById('addFundsAmount');
+        if (!amountInput) return;
+
+        const amount = parseFloat(amountInput.value);
+        if (isNaN(amount) || amount <= 0) return;
+
+        this.financeData.monthlyIncome += amount;
+
+        // Recalculate dailyBudget using remaining days in the month from today
+        const now = new Date();
+        const lastDayOfMonthObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const remainingDays = lastDayOfMonthObj.getDate() - now.getDate() + 1; // inclusive of today
+
+        const totalSpent = this.financeData.expenses.reduce((sum, e) => sum + e.amount, 0);
+        const remainingBalance = this.financeData.monthlyIncome - totalSpent;
+        this.financeData.dailyBudget = parseFloat((remainingBalance / Math.max(1, remainingDays)).toFixed(2));
+
+        this.saveFinanceData();
+        amountInput.value = '';
+        this.renderFinanceDashboard();
+    }
+
+    // Transfer to Savings Vault
+    handleTransferToSavings(event) {
+        if (event) event.preventDefault();
+        const amountInput = document.getElementById('transferSavingsAmount');
+        if (!amountInput) return;
+
+        const amount = parseFloat(amountInput.value);
+        if (isNaN(amount) || amount <= 0) return;
+
+        const totalSpent = this.financeData.expenses.reduce((sum, e) => sum + e.amount, 0);
+        const remainingBalance = this.financeData.monthlyIncome - totalSpent;
+
+        if (amount > remainingBalance) {
+            alert(`Insufficient funds! Your remaining balance is only ${this.financeData.currency || 'EGP'} ${remainingBalance.toFixed(2)}.`);
+            return;
+        }
+
+        this.financeData.monthlyIncome -= amount;
+        this.financeData.savingsBalance = (this.financeData.savingsBalance || 0) + amount;
+
+        // Recalculate dailyBudget using new remaining balance
+        const now = new Date();
+        const lastDayOfMonthObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const remainingDays = lastDayOfMonthObj.getDate() - now.getDate() + 1; // inclusive of today
+
+        const newRemaining = this.financeData.monthlyIncome - totalSpent;
+        this.financeData.dailyBudget = parseFloat((newRemaining / Math.max(1, remainingDays)).toFixed(2));
+
+        this.saveFinanceData();
+        amountInput.value = '';
+        this.renderFinanceDashboard();
+    }
+
+    // Smart Savings Suggestions
+    updateGoalSuggestions() {
+        const targetInput = document.getElementById('goalTargetInput');
+        const durationInput = document.getElementById('goalDurationInput');
+        const panel = document.getElementById('goalSuggestionsPanel');
+
+        if (!targetInput || !durationInput || !panel) return;
+
+        const target = parseFloat(targetInput.value);
+        const duration = parseInt(durationInput.value);
+        const currency = this.financeData.currency || 'EGP';
+
+        if (isNaN(target) || target <= 0 || isNaN(duration) || duration <= 0) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        const planA = parseFloat((target / duration).toFixed(2));
+        
+        // Accelerated plan (reach in 70% of duration)
+        const durationB = Math.max(1, Math.ceil(duration * 0.7));
+        const planB = parseFloat((target / durationB).toFixed(2));
+
+        // Relaxed plan (reach in 150% of duration)
+        const durationC = Math.max(1, Math.ceil(duration * 1.5));
+        const planC = parseFloat((target / durationC).toFixed(2));
+
+        panel.innerHTML = `
+            <div style="font-weight: 700; color: var(--color-primary); margin-bottom: var(--spacing-xs);">💡 Dynamic Saving Options:</div>
+            <ul style="margin: 0; padding-left: var(--spacing-md); display: flex; flex-direction: column; gap: 4px;">
+                <li><strong>Baseline Plan:</strong> Save <strong>${currency} ${planA.toLocaleString()}</strong>/month to reach your goal in <strong>${duration}</strong> months.</li>
+                <li><strong>Accelerated Plan:</strong> Save <strong>${currency} ${planB.toLocaleString()}</strong>/month to reach it in <strong>${durationB}</strong> months.</li>
+                <li><strong>Relaxed Plan:</strong> Save <strong>${currency} ${planC.toLocaleString()}</strong>/month to reach it in <strong>${durationC}</strong> months.</li>
+            </ul>
+        `;
+        panel.style.display = 'block';
+    }
+
+    // Set Active Goal
+    handleSetActiveGoal(event) {
+        if (event) event.preventDefault();
+        const nameInput = document.getElementById('goalNameInput');
+        const targetInput = document.getElementById('goalTargetInput');
+        const durationInput = document.getElementById('goalDurationInput');
+
+        if (!nameInput || !targetInput || !durationInput) return;
+
+        const name = nameInput.value.trim();
+        const target = parseFloat(targetInput.value);
+        const duration = parseInt(durationInput.value);
+
+        if (!name || isNaN(target) || target <= 0 || isNaN(duration) || duration <= 0) return;
+
+        this.financeData.activeGoal = {
+            name: name,
+            target: target,
+            duration: duration
+        };
+
+        this.saveFinanceData();
+
+        // Reset
+        nameInput.value = '';
+        targetInput.value = '';
+        durationInput.value = '';
+        
+        const panel = document.getElementById('goalSuggestionsPanel');
+        if (panel) panel.style.display = 'none';
+
+        this.renderFinanceDashboard();
+    }
+
+    // Edit details of active goal (pre-fill planner inputs)
+    editActiveGoal(event) {
+        if (event) event.preventDefault();
+        if (!this.financeData.activeGoal) return;
+
+        const goal = this.financeData.activeGoal;
+        const nameInput = document.getElementById('goalNameInput');
+        const targetInput = document.getElementById('goalTargetInput');
+        const durationInput = document.getElementById('goalDurationInput');
+
+        if (nameInput && targetInput && durationInput) {
+            nameInput.value = goal.name;
+            targetInput.value = goal.target;
+            durationInput.value = goal.duration;
+            nameInput.focus();
+            this.updateGoalSuggestions();
+        }
+    }
+
+    // Inspect User Finance (Admin Override)
+    async inspectUserFinance(userUid) {
+        const detailsContainer = document.getElementById('adminUserFinanceDetails');
+        const placeholder = document.getElementById('adminUserFinancePlaceholder');
+
+        if (!detailsContainer || !placeholder) return;
+
+        if (!userUid) {
+            detailsContainer.style.display = 'none';
+            placeholder.style.display = 'block';
+            this.activeAdminInspectedUser = null;
+            return;
+        }
+
+        this.activeAdminInspectedUser = userUid;
+        detailsContainer.style.display = 'block';
+        placeholder.style.display = 'none';
+        detailsContainer.innerHTML = `<div class="admin-loading"><div class="admin-loading-spinner"></div><span>Fetching user files...</span></div>`;
+
+        if (!window.db || !window.firestoreUtils) {
+            detailsContainer.innerHTML = `<div style="color: var(--color-danger); font-weight: 700;">Offline Mode: Database is unavailable.</div>`;
+            return;
+        }
+
+        const { doc, getDoc } = window.firestoreUtils;
+        try {
+            const snap = await getDoc(doc(window.db, "users", userUid));
+            if (!snap.exists()) {
+                detailsContainer.innerHTML = `<div style="color: var(--color-danger); font-weight: 700;">User not found in system doc.</div>`;
+                return;
+            }
+
+            const data = snap.data();
+            const finance = data.financeData || {
+                monthlyIncome: 0,
+                dailyBudget: 0,
+                expenses: [],
+                savingsBalance: 0,
+                currency: 'EGP'
+            };
+
+            const currency = finance.currency || 'EGP';
+            const income = finance.monthlyIncome || 0;
+            const savings = finance.savingsBalance || 0;
+            const expenses = finance.expenses || [];
+            const goal = finance.activeGoal || null;
+
+            // Generate goal progress HTML
+            let goalHtml = `<p style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 0;">No active savings goals configured.</p>`;
+            if (goal) {
+                const progressPct = goal.target > 0 ? Math.min(100, Math.round((savings / goal.target) * 100)) : 0;
+                const remainingAmt = Math.max(0, goal.target - savings);
+                const monthlySaving = goal.target / goal.duration;
+                const weeklySaving = goal.target / (goal.duration * 4.33);
+                const dailySaving = goal.target / (goal.duration * 30.4);
+
+                goalHtml = `
+                    <div style="background: var(--color-bg); padding: var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: var(--spacing-sm);">
+                        <div style="font-weight: 700; color: var(--color-text-primary); font-size: var(--font-size-sm); margin-bottom: var(--spacing-xs);">${this.escapeHtml(goal.name)}</div>
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">
+                            <span>Progress: ${currency} ${savings.toLocaleString()} / ${currency} ${goal.target.toLocaleString()}</span>
+                            <strong>${progressPct}%</strong>
+                        </div>
+                        <div style="background: var(--color-border); height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: var(--spacing-xs);">
+                            <div style="background: var(--color-primary); height: 100%; width: ${progressPct}%;"></div>
+                        </div>
+                        <div style="font-size: 10px; color: var(--color-text-secondary); line-height: 1.4;">
+                            <div><strong>Remaining:</strong> ${currency} ${remainingAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                            <div><strong>Required:</strong> ${currency} ${dailySaving.toFixed(2)}/day • ${currency} ${weeklySaving.toFixed(2)}/week • ${currency} ${monthlySaving.toFixed(2)}/month</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Generate expenses list rows
+            let expensesRowsHtml = `<tr><td colspan="6" style="text-align: center; color: var(--color-text-tertiary); padding: var(--spacing-md);">No expenses logged by this user.</td></tr>`;
+            if (expenses.length > 0) {
+                // Sort descending
+                const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+                expensesRowsHtml = sorted.map(exp => {
+                    const dObj = new Date(exp.date);
+                    const dateFormatted = `${dObj.getDate()}/${dObj.getMonth() + 1}/${dObj.getFullYear()}`;
+                    return `
+                        <tr>
+                            <td style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); font-weight: 700; font-size: 11px;">${this.escapeHtml(exp.name)}</td>
+                            <td style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); font-size: 11px;">${this.escapeHtml(exp.description || '—')}</td>
+                            <td style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); font-size: 11px;">${this.escapeHtml(exp.category)}</td>
+                            <td style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); font-size: 11px;">${dateFormatted}</td>
+                            <td style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); font-weight: 800; color: var(--color-danger); font-size: 11px;">${currency} ${exp.amount.toFixed(2)}</td>
+                            <td style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); text-align: center;">
+                                <button onclick="app.adminDeleteUserExpense('${userUid}', '${exp.id}')" style="color: var(--color-danger); border: none; background: transparent; cursor: pointer; font-size: var(--font-size-md);" title="Delete transaction log">&times;</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            detailsContainer.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                    <!-- Overrides card -->
+                    <div class="admin-card" style="background: var(--color-bg); padding: var(--spacing-md); border: 1.5px solid var(--color-border); border-radius: var(--radius-lg);">
+                        <h4 style="font-weight: 700; margin-bottom: var(--spacing-md); font-size: var(--font-size-sm);">🛠️ Balance & Vault Adjustments</h4>
+                        <form onsubmit="app.saveAdminOverride(event, '${userUid}')" style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-size: 11px;">Main Spending Income Balance (${currency})</label>
+                                <input type="number" id="adminOverrideIncome" class="admin-input" step="0.01" value="${income}" required style="height: 36px; padding: 6px 12px; font-size: var(--font-size-xs);">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-size: 11px;">Savings Vault Balance (${currency})</label>
+                                <input type="number" id="adminOverrideSavings" class="admin-input" step="0.01" value="${savings}" required style="height: 36px; padding: 6px 12px; font-size: var(--font-size-xs);">
+                            </div>
+                            <button type="submit" class="btn-primary" style="font-size: var(--font-size-xs); height: 36px; font-weight: 700; margin-top: var(--spacing-xs);">Save Account Overrides</button>
+                        </form>
+                    </div>
+
+                    <!-- Active Goal card & goal editing -->
+                    <div>
+                        <h4 style="font-weight: 700; margin-bottom: var(--spacing-md); font-size: var(--font-size-sm);">🎯 Active Savings Goal</h4>
+                        ${goalHtml}
+
+                        <!-- Goal Override Form -->
+                        <div class="admin-card" style="background: var(--color-bg); padding: var(--spacing-md); border: 1.5px solid var(--color-border); border-radius: var(--radius-md);">
+                            <h5 style="font-weight: 700; margin-top: 0; margin-bottom: var(--spacing-xs); font-size: 11px; color: var(--color-text-secondary);">Modify Savings Goal</h5>
+                            <form onsubmit="app.saveAdminGoalOverride(event, '${userUid}')" style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" style="font-size: 9px; margin-bottom: 1px;">Goal Name</label>
+                                    <input type="text" id="adminOverrideGoalName" class="admin-input" value="${goal ? this.escapeHtml(goal.name) : ''}" placeholder="e.g. SSD" required style="height: 28px; padding: 4px 8px; font-size: 11px;">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm);">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 9px; margin-bottom: 1px;">Target Amount</label>
+                                        <input type="number" id="adminOverrideGoalTarget" class="admin-input" value="${goal ? goal.target : ''}" placeholder="0.00" required style="height: 28px; padding: 4px 8px; font-size: 11px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 9px; margin-bottom: 1px;">Duration (Months)</label>
+                                        <input type="number" id="adminOverrideGoalDuration" class="admin-input" value="${goal ? goal.duration : ''}" placeholder="6" required style="height: 28px; padding: 4px 8px; font-size: 11px;">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: var(--spacing-xs); margin-top: var(--spacing-xs);">
+                                    <button type="submit" class="btn-primary" style="font-size: 10px; height: 28px; font-weight: 700; flex: 1; padding: 0 var(--spacing-sm);">Save Goal</button>
+                                    ${goal ? `<button type="button" onclick="app.adminClearUserGoal('${userUid}')" class="btn-secondary" style="font-size: 10px; height: 28px; font-weight: 700; color: var(--color-danger); border-color: var(--color-danger); background: transparent; padding: 0 var(--spacing-sm);">Clear Goal</button>` : ''}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Log card -->
+                <h4 style="font-weight: 700; margin-bottom: var(--spacing-sm); font-size: var(--font-size-sm);">📋 User Purchase Ledger</h4>
+                <div class="admin-table-wrapper" style="max-height: 250px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background: var(--color-bg); font-weight: 700; font-size: 10px; text-transform: uppercase;">
+                                <th style="padding: var(--spacing-sm) var(--spacing-md);">Item</th>
+                                <th style="padding: var(--spacing-sm) var(--spacing-md);">Detail</th>
+                                <th style="padding: var(--spacing-sm) var(--spacing-md);">Category</th>
+                                <th style="padding: var(--spacing-sm) var(--spacing-md);">Date</th>
+                                <th style="padding: var(--spacing-sm) var(--spacing-md);">Amount</th>
+                                <th style="padding: var(--spacing-sm) var(--spacing-md); text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${expensesRowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } catch (err) {
+            console.error("Error inspecting user finance document:", err);
+            detailsContainer.innerHTML = `<div style="color: var(--color-danger); font-weight: 700;">Error fetching user files.</div>`;
+        }
+    }
+
+    // Save Admin Goal Override
+    async saveAdminGoalOverride(event, userUid) {
+        if (event) event.preventDefault();
+        const nameInput = document.getElementById('adminOverrideGoalName');
+        const targetInput = document.getElementById('adminOverrideGoalTarget');
+        const durationInput = document.getElementById('adminOverrideGoalDuration');
+
+        if (!nameInput || !targetInput || !durationInput || !window.db || !window.firestoreUtils) return;
+
+        const name = nameInput.value.trim();
+        const target = parseFloat(targetInput.value);
+        const duration = parseInt(durationInput.value);
+
+        if (!name || isNaN(target) || target <= 0 || isNaN(duration) || duration <= 0) {
+            alert("Please fill in all goal fields with valid parameters.");
+            return;
+        }
+
+        const { doc, getDoc, setDoc } = window.firestoreUtils;
+        try {
+            const snap = await getDoc(doc(window.db, "users", userUid));
+            if (!snap.exists()) return;
+
+            const userData = snap.data();
+            const finance = userData.financeData || {};
+            finance.activeGoal = {
+                name: name,
+                target: target,
+                duration: duration
+            };
+
+            await setDoc(doc(window.db, "users", userUid), {
+                financeData: finance
+            }, { merge: true });
+
+            alert("User savings goal overridden successfully!");
+
+            // If the overridden user is the CURRENT active login user, sync local state!
+            if (this.currentUser && this.currentUser.uid === userUid) {
+                this.financeData = finance;
+                this.saveData('financeData', this.financeData);
+                this.renderFinanceDashboard();
+            }
+
+            // Reload inspection panel
+            this.inspectUserFinance(userUid);
+        } catch (err) {
+            console.error("Error overriding user goal details:", err);
+            alert("Failed to override user savings goal.");
+        }
+    }
+
+    // Admin Clear User Goal
+    async adminClearUserGoal(userUid) {
+        if (!confirm("Are you sure you want to clear/delete this user's active savings goal?")) return;
+        if (!window.db || !window.firestoreUtils) return;
+
+        const { doc, getDoc, setDoc } = window.firestoreUtils;
+        try {
+            const snap = await getDoc(doc(window.db, "users", userUid));
+            if (!snap.exists()) return;
+
+            const userData = snap.data();
+            const finance = userData.financeData || {};
+            finance.activeGoal = null;
+
+            await setDoc(doc(window.db, "users", userUid), {
+                financeData: finance
+            }, { merge: true });
+
+            alert("User active savings goal deleted!");
+
+            // If the overridden user is the CURRENT active login user, sync local state!
+            if (this.currentUser && this.currentUser.uid === userUid) {
+                this.financeData = finance;
+                this.saveData('financeData', this.financeData);
+                this.renderFinanceDashboard();
+            }
+
+            // Reload inspection panel
+            this.inspectUserFinance(userUid);
+        } catch (err) {
+            console.error("Error clearing user goal details:", err);
+            alert("Failed to delete user savings goal.");
+        }
+    }
+
+    // Save Admin Override
+    async saveAdminOverride(event, userUid) {
+        if (event) event.preventDefault();
+        const incomeInput = document.getElementById('adminOverrideIncome');
+        const savingsInput = document.getElementById('adminOverrideSavings');
+
+        if (!incomeInput || !savingsInput || !window.db || !window.firestoreUtils) return;
+
+        const newIncome = parseFloat(incomeInput.value);
+        const newSavings = parseFloat(savingsInput.value);
+
+        if (isNaN(newIncome) || isNaN(newSavings)) return;
+
+        const { doc, getDoc, setDoc } = window.firestoreUtils;
+        try {
+            // Fetch current user finance details to recalculate their dailyLimit based on entryDate remaining days
+            const userSnap = await getDoc(doc(window.db, "users", userUid));
+            if (!userSnap.exists()) return;
+
+            const userData = userSnap.data();
+            const finance = userData.financeData || {};
+            
+            // Calculate remaining days from starting entryDate
+            const startingDateVal = finance.startingDate || new Date().toISOString().substring(0, 10);
+            const entryDateObj = new Date(startingDateVal);
+            const lastDayOfMonthObj = new Date(entryDateObj.getFullYear(), entryDateObj.getMonth() + 1, 0);
+            const remainingDays = lastDayOfMonthObj.getDate() - entryDateObj.getDate() + 1;
+
+            const dailyBudget = parseFloat((newIncome / Math.max(1, remainingDays)).toFixed(2));
+
+            finance.monthlyIncome = newIncome;
+            finance.savingsBalance = newSavings;
+            finance.dailyBudget = dailyBudget;
+
+            await setDoc(doc(window.db, "users", userUid), {
+                financeData: finance
+            }, { merge: true });
+
+            alert("Financial overrides applied and saved successfully!");
+            
+            // If the overridden user is the CURRENT active login user, sync local state!
+            if (this.currentUser && this.currentUser.uid === userUid) {
+                this.financeData = finance;
+                this.saveData('financeData', this.financeData);
+                this.renderFinanceDashboard();
+            }
+
+            // Reload metrics and user inspector view
+            this.loadAdminFinancePanel();
+        } catch (err) {
+            console.error("Error saving admin override updates:", err);
+            alert("Failed to apply financial overrides.");
+        }
+    }
+
+    // Admin Delete User Expense Log
+    async adminDeleteUserExpense(userUid, expenseId) {
+        if (!confirm("Are you sure you want to delete this user transaction log? This action is immediate and will modify user balances.")) return;
+        if (!window.db || !window.firestoreUtils) return;
+
+        const { doc, getDoc, setDoc } = window.firestoreUtils;
+        try {
+            const userSnap = await getDoc(doc(window.db, "users", userUid));
+            if (!userSnap.exists()) return;
+
+            const userData = userSnap.data();
+            const finance = userData.financeData || {};
+            
+            // Delete log
+            finance.expenses = (finance.expenses || []).filter(e => e.id !== expenseId);
+
+            // Recalculate dailyBudget using remaining days in the month from starting entry date
+            const startingDateVal = finance.startingDate || new Date().toISOString().substring(0, 10);
+            const entryDateObj = new Date(startingDateVal);
+            const lastDayOfMonthObj = new Date(entryDateObj.getFullYear(), entryDateObj.getMonth() + 1, 0);
+            const remainingDays = lastDayOfMonthObj.getDate() - entryDateObj.getDate() + 1;
+
+            const totalSpent = finance.expenses.reduce((sum, e) => sum + e.amount, 0);
+            const remainingBalance = finance.monthlyIncome - totalSpent;
+            finance.dailyBudget = parseFloat((remainingBalance / Math.max(1, remainingDays)).toFixed(2));
+
+            await setDoc(doc(window.db, "users", userUid), {
+                financeData: finance
+            }, { merge: true });
+
+            alert("Transaction deleted and user budget recalculated!");
+
+            // If the overridden user is the CURRENT active login user, sync local state!
+            if (this.currentUser && this.currentUser.uid === userUid) {
+                this.financeData = finance;
+                this.saveData('financeData', this.financeData);
+                this.renderFinanceDashboard();
+            }
+
+            // Reload metrics and user inspector view
+            this.loadAdminFinancePanel();
+        } catch (err) {
+            console.error("Error deleting user expense via admin override:", err);
+            alert("Failed to delete user transaction.");
         }
     }
 }

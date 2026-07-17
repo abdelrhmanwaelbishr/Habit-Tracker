@@ -4861,4 +4861,7 @@ body.dark-theme .preset-tag-btn {
 
 
 
-
+/* Savings Goal Planner Active Goal Progress Bar styling */
+#financeActiveGoalProgressBar {
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
