@@ -3116,7 +3116,7 @@ pause
                 if (window.firebaseAuth && window.auth) {
                     await window.firebaseAuth.signOut(window.auth).catch(err => console.error("Error signing out banned user:", err));
                 }
-                
+
                 this.clearAllLocalData();
                 this.currentUser = null;
 
@@ -3134,7 +3134,7 @@ pause
                     authOverlay.style.display = 'flex';
                     authOverlay.style.opacity = '1';
                 }
-                
+
                 if (loginBtn) loginBtn.style.display = 'block';
                 if (userMenuWrapper) userMenuWrapper.style.display = 'none';
                 return;
@@ -3264,7 +3264,7 @@ pause
                         // Log activity and set default status
                         const { doc: docRef, setDoc: setDocRef } = window.firestoreUtils;
                         const userRef = docRef(window.db, "users", user.uid);
-                        const updates = { 
+                        const updates = {
                             lastActive: new Date().toISOString(),
                             email: user.email,
                             displayName: user.displayName || user.email.split('@')[0]
@@ -3324,6 +3324,8 @@ pause
         }
     }
 
+
+
     clearAuthInputs() {
         const inputs = [
             'overlayUsernameInput',
@@ -3368,6 +3370,8 @@ pause
             authSubmitText.textContent = this.authMode === 'signup' ? 'Create Account' : 'Sign In';
         }
     }
+
+
 
     setupOverlayAuthEventListeners() {
         const authForm = document.getElementById('overlayAuthForm');
@@ -4224,8 +4228,8 @@ pause
             // Badges string
             const badgesStr = user.badges.length > 0 ? user.badges.join(', ') : 'None';
 
-            const userNameSuffix = isCurrentUser 
-                ? ' <span style="font-size: 10px; color: var(--color-primary); font-weight: 600;">(You)</span>' 
+            const userNameSuffix = isCurrentUser
+                ? ' <span style="font-size: 10px; color: var(--color-primary); font-weight: 600;">(You)</span>'
                 : (isDeleted ? ' <span style="font-size: 10px; color: var(--color-danger); font-weight: 600;">(Deleted/Banned)</span>' : '');
 
             return `
@@ -4397,11 +4401,11 @@ pause
 
         try {
             const { doc, getDoc, setDoc, deleteDoc } = window.firestoreUtils;
-            
+
             // 1. Fetch user data to find their username
             const userRef = doc(window.db, "users", uid);
             const userSnap = await getDoc(userRef);
-            
+
             if (userSnap.exists()) {
                 const userData = userSnap.data();
                 const username = userData.displayName || userData.username;
@@ -4755,7 +4759,7 @@ pause
                     bountiesEnabled: data.bountiesEnabled !== false
                 };
                 this.updateXPUI();
-                
+
                 // Dynamically update daily bounties visibility on dashboard
                 const section = document.getElementById('dailyBountiesSection');
                 if (section) {
@@ -5034,13 +5038,13 @@ pause
     checkAndResetDailyBounties(force = false) {
         const now = new Date();
         const dateStr = now.toDateString();
-        
+
         let savedStats = this.loadData('bountyStats');
         let savedBounties = this.loadData('dailyBounties');
-        
+
         const expireHours = this.xpConfig?.bountyExpireHours || 24;
         const expireMs = expireHours * 3600 * 1000;
-        
+
         let shouldReset = force || !savedStats || savedStats.dateStr !== dateStr;
         if (!shouldReset && savedStats && savedStats.generationTime) {
             const elapsed = now.getTime() - savedStats.generationTime;
@@ -5048,7 +5052,7 @@ pause
                 shouldReset = true;
             }
         }
-        
+
         if (shouldReset) {
             this.bountyStats = {
                 pomodorosCompletedToday: 0,
@@ -5057,7 +5061,7 @@ pause
                 dateStr: dateStr,
                 generationTime: now.getTime()
             };
-            
+
             const templates = (this.globalBountiesTemplate && this.globalBountiesTemplate.length > 0)
                 ? this.globalBountiesTemplate
                 : [
@@ -5065,7 +5069,7 @@ pause
                     { id: 'bounty_habits', text: '⚡ Habit Crease: Complete 3 habits today', reward: 200, countNeeded: 3, type: 'habits' },
                     { id: 'bounty_todo', text: '📝 Task Fold: Complete 2 checklist tasks today', reward: 150, countNeeded: 2, type: 'tasks' }
                 ];
-            
+
             this.dailyBounties = templates.map(t => ({
                 id: t.id,
                 text: t.text,
@@ -5093,21 +5097,21 @@ pause
         }
         if (!this.bountyStats || !this.bountyStats.generationTime) return;
         const now = new Date();
-        
+
         const expireHours = this.xpConfig?.bountyExpireHours || 24;
         const expireMs = expireHours * 3600 * 1000;
         const expirationTime = this.bountyStats.generationTime + expireMs;
         const diffMs = expirationTime - now.getTime();
-        
+
         if (diffMs <= 0) {
             this.checkAndResetDailyBounties(true);
             return;
         }
-        
+
         const hours = Math.floor(diffMs / 3600000);
         const minutes = Math.floor((diffMs % 3600000) / 60000);
         const seconds = Math.floor((diffMs % 60000) / 1000);
-        
+
         const pad = (num) => String(num).padStart(2, '0');
         const el = document.getElementById('bountyCountdown');
         if (el) {
@@ -5125,13 +5129,13 @@ pause
 
         const el = document.getElementById('dailyBountiesList');
         if (!el) return;
-        
+
         el.innerHTML = '';
         if (this.dailyBounties.length === 0) {
             el.innerHTML = '<p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); text-align: center; margin: 0;">No bounties active today.</p>';
             return;
         }
-        
+
         this.dailyBounties.forEach(b => {
             const item = document.createElement('div');
             item.className = `bounty-item ${b.completed ? 'completed' : ''}`;
@@ -5148,30 +5152,30 @@ pause
 
     trackBountyProgress(type, amount = 1) {
         this.checkAndResetDailyBounties();
-        
+
         if (type === 'pomodoro') this.bountyStats.pomodorosCompletedToday += amount;
         else if (type === 'habits') this.bountyStats.habitsCompletedToday += amount;
         else if (type === 'tasks') this.bountyStats.tasksCompletedToday += amount;
-        
+
         this.saveData('bountyStats', this.bountyStats);
-        
+
         let changed = false;
         this.dailyBounties.forEach(b => {
             if (b.id === 'bounty_pomodoro') b.currentCount = this.bountyStats.pomodorosCompletedToday;
             else if (b.id === 'bounty_habits') b.currentCount = this.bountyStats.habitsCompletedToday;
             else if (b.id === 'bounty_todo') b.currentCount = this.bountyStats.tasksCompletedToday;
-            
+
             if (b.currentCount >= b.countNeeded && !b.completed) {
                 b.completed = true;
                 changed = true;
                 this.gainXP(b.reward, `Bounty Completed: ${b.id}`);
             }
         });
-        
+
         if (changed) {
             this.saveData('dailyBounties', this.dailyBounties);
         }
-        
+
         if (this.currentPage === 'home') {
             this.renderDailyBounties();
         }
@@ -5184,7 +5188,7 @@ pause
     toggleFocusAudio() {
         const btn = document.getElementById('audioPlayPauseBtn');
         if (!btn) return;
-        
+
         if (this.focusAudioPlaying) {
             this.focusAudio.pause();
             this.focusAudioPlaying = false;
@@ -5222,14 +5226,14 @@ pause
                 else btn.classList.remove('active');
             }
         });
-        
+
         const btn = document.getElementById('audioPlayPauseBtn');
         if (btn) {
             btn.textContent = this.focusAudioPlaying ? '⏸️' : '▶';
             if (this.focusAudioPlaying) btn.classList.add('active');
             else btn.classList.remove('active');
         }
-        
+
         const slider = document.getElementById('audioVolumeSlider');
         if (slider) {
             slider.value = this.focusAudio.volume;
@@ -5261,17 +5265,17 @@ pause
         const balanceEl = document.getElementById('storeBalanceText');
         const gridEl = document.getElementById('storeGrid');
         if (!gridEl) return;
-        
+
         const spendableXP = Math.max(0, this.userXP - this.spentXP);
         if (balanceEl) balanceEl.textContent = spendableXP;
-        
+
         gridEl.innerHTML = '';
         const items = this.storeItems[this.currentStoreTab] || [];
-        
+
         items.forEach(item => {
             const unlockedList = this.unlockedItems[this.currentStoreTab] || [];
             const isUnlocked = unlockedList.includes(item.id);
-            
+
             let isActive = false;
             if (this.currentStoreTab === 'colors') {
                 isActive = (localStorage.getItem('accentColor') === item.value);
@@ -5280,10 +5284,10 @@ pause
             } else if (this.currentStoreTab === 'borders') {
                 isActive = (this.activeBorder === item.value);
             }
-            
+
             let btnHtml = '';
             let statusHtml = '';
-            
+
             if (isActive) {
                 btnHtml = `<button class="btn-secondary" disabled style="width: 100%; cursor: default; font-weight: 700;">Applied</button>`;
                 statusHtml = `<span class="store-card-badge applied">Applied</span>`;
@@ -5295,7 +5299,7 @@ pause
                 btnHtml = `<button class="btn-primary" onclick="app.buyStoreItem('${this.currentStoreTab}', '${item.id}', ${item.cost})" ${canAfford ? '' : 'disabled'} style="width: 100%; font-weight: 700; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; ${canAfford ? '' : 'opacity: 0.6;'}">Unlock: ${item.cost} XP</button>`;
                 statusHtml = `<span class="store-card-badge locked">Locked</span>`;
             }
-            
+
             const card = document.createElement('div');
             card.className = `store-card ${isUnlocked ? 'unlocked' : ''} ${isActive ? 'active' : ''}`;
             card.innerHTML = `
@@ -5321,13 +5325,13 @@ pause
             alert("Not enough XP balance!");
             return;
         }
-        
+
         this.spentXP += cost;
         if (!this.unlockedItems[tab]) {
             this.unlockedItems[tab] = [];
         }
         this.unlockedItems[tab].push(itemId);
-        
+
         this.saveCustomizerState();
         this.renderStore();
         alert("Unlock successful!");
@@ -5339,7 +5343,7 @@ pause
             this.applyTheme();
             if (this.currentUser && window.db && window.firestoreUtils) {
                 const { doc, setDoc } = window.firestoreUtils;
-                setDoc(doc(window.db, "users", this.currentUser.uid), { activeColor: val }, { merge: true }).catch(() => {});
+                setDoc(doc(window.db, "users", this.currentUser.uid), { activeColor: val }, { merge: true }).catch(() => { });
             }
         } else if (tab === 'avatars') {
             this.activeAvatar = val;
@@ -5348,7 +5352,7 @@ pause
             this.activeBorder = val;
             this.updateBadgeUI();
         }
-        
+
         this.saveCustomizerState();
         this.renderStore();
     }
@@ -5382,9 +5386,9 @@ pause
         const totalFocusHr = Math.round(totalFocusMin / 60);
         const habitsKept = this.habits.reduce((acc, h) => acc + (h.progress ? h.progress.filter(Boolean).length : 0), 0);
         const tasksFinished = this.tasks.filter(t => t.completed).length;
-        
+
         const xpGained = (this.userLevel - 1) * 500 + this.userXP;
-        
+
         const focusEl = document.getElementById('wrapUpFocusTime');
         const habitsEl = document.getElementById('wrapUpHabitsKept');
         const tasksEl = document.getElementById('wrapUpTasksDone');
@@ -5395,14 +5399,14 @@ pause
         if (habitsEl) habitsEl.textContent = habitsKept;
         if (tasksEl) tasksEl.textContent = tasksFinished;
         if (xpEl) xpEl.textContent = `${xpGained} XP`;
-        
+
         let honorStatus = "Bronze Origami Seedling 🌱 - Shaping your routine creases!";
         if (habitsKept + tasksFinished + totalFocusHr > 20) {
             honorStatus = "Gold Origami Crane 🕊️ - Master Consistency!";
         } else if (habitsKept + tasksFinished + totalFocusHr > 8) {
             honorStatus = "Silver Origami Frog 🐸 - Steady Progress!";
         }
-        
+
         if (honorEl) honorEl.textContent = honorStatus;
     }
 
@@ -5414,10 +5418,10 @@ pause
         const leaderboardList = document.getElementById('leaderboardList');
         const friendsList = document.getElementById('friendsList');
         if (!leaderboardList || !friendsList) return;
-        
+
         leaderboardList.innerHTML = '<div class="admin-loading" style="padding: var(--spacing-lg);">Loading Top Achievers...</div>';
         friendsList.innerHTML = '<div class="admin-loading" style="padding: var(--spacing-lg);">Loading Friends Camp...</div>';
-        
+
         try {
             let sortedUsers = [];
             if (window.db && window.firestoreUtils) {
@@ -5434,7 +5438,7 @@ pause
                     });
                 });
             }
-            
+
             if (sortedUsers.length === 0) {
                 sortedUsers = [
                     { uid: 'mock1', displayName: 'Fold Master 🏆', userLevel: 12, userXP: 340, avatar: '🕊️' },
@@ -5443,12 +5447,12 @@ pause
                     { uid: this.currentUser?.uid || 'curr', displayName: this.currentUser?.displayName || 'You', userLevel: this.userLevel, userXP: this.userXP, avatar: this.activeAvatar || '🌱' }
                 ];
             }
-            
+
             sortedUsers.sort((a, b) => {
                 if (b.userLevel !== a.userLevel) return b.userLevel - a.userLevel;
                 return b.userXP - a.userXP;
             });
-            
+
             leaderboardList.innerHTML = '';
             sortedUsers.forEach((u, idx) => {
                 const rank = idx + 1;
@@ -5457,9 +5461,9 @@ pause
                 if (rank === 1) { rankClass = 'first'; rankText = '🥇'; }
                 else if (rank === 2) { rankClass = 'second'; rankText = '🥈'; }
                 else if (rank === 3) { rankClass = 'third'; rankText = '🥉'; }
-                
+
                 const isCurrent = (u.uid === this.currentUser?.uid);
-                
+
                 const row = document.createElement('div');
                 row.className = `leaderboard-row ${isCurrent ? 'current-user' : ''}`;
                 row.innerHTML = `
@@ -5472,25 +5476,25 @@ pause
                 `;
                 leaderboardList.appendChild(row);
             });
-            
+
         } catch (err) {
             console.error("Leaderboard error:", err);
             leaderboardList.innerHTML = '<p style="font-size: var(--font-size-sm); color: var(--color-danger); text-align: center;">Failed to load leaderboard ranking.</p>';
         }
-        
+
         this.renderFriendsCamp();
     }
 
     async renderFriendsCamp() {
         const friendsList = document.getElementById('friendsList');
         if (!friendsList) return;
-        
+
         friendsList.innerHTML = '';
         if (this.friendsList.length === 0) {
             friendsList.innerHTML = '<p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); text-align: center; margin: auto;">No friends added yet. Enter a username above to start competing!</p>';
             return;
         }
-        
+
         try {
             if (window.db && window.firestoreUtils) {
                 const { doc, getDoc } = window.firestoreUtils;
@@ -5499,7 +5503,7 @@ pause
                     const friendSnap = await getDoc(friendRef);
                     if (friendSnap.exists()) {
                         const data = friendSnap.data();
-                        
+
                         const row = document.createElement('div');
                         row.className = 'friend-row';
                         row.innerHTML = `
@@ -5531,34 +5535,34 @@ pause
         const input = document.getElementById('friendUsernameInput');
         const msgEl = document.getElementById('friendAddMsg');
         if (!input || !msgEl) return;
-        
+
         const username = input.value.trim();
         if (!username) return;
-        
+
         msgEl.textContent = 'Searching...';
         msgEl.style.color = 'var(--color-text-secondary)';
-        
+
         try {
             if (window.db && window.firestoreUtils) {
                 const { doc, getDoc } = window.firestoreUtils;
                 const usernameRef = doc(window.db, "usernames", username.toLowerCase());
                 const snap = await getDoc(usernameRef);
-                
+
                 if (snap.exists()) {
                     const friendUid = snap.data().uid;
-                    
+
                     if (friendUid === this.currentUser?.uid) {
                         msgEl.textContent = "You cannot add yourself!";
                         msgEl.style.color = 'var(--color-danger)';
                         return;
                     }
-                    
+
                     if (this.friendsList.includes(friendUid)) {
                         msgEl.textContent = "This friend is already added!";
                         msgEl.style.color = 'var(--color-warning)';
                         return;
                     }
-                    
+
                     this.friendsList.push(friendUid);
                     this.saveCustomizerState();
                     msgEl.textContent = "Friend added successfully!";
@@ -5598,7 +5602,7 @@ pause
 
     initFinancePage() {
         const currentMonthYear = new Date().toISOString().substring(0, 7); // YYYY-MM
-        
+
         // If current month is different, auto-reset for new month
         if (this.financeData.monthYear !== currentMonthYear) {
             this.financeData = {
@@ -5625,7 +5629,7 @@ pause
             setupContainer.style.display = 'block';
             dashboardContainer.style.display = 'none';
             headerActions.style.display = 'none';
-            
+
             // Set starting date picker default to today
             const dateInput = document.getElementById('financeStartDateInput');
             if (dateInput) {
@@ -5745,7 +5749,7 @@ pause
         amountInput.value = '';
         dateInput.value = new Date().toISOString().substring(0, 10);
         catInput.value = '';
-        
+
         // Remove active class from buttons
         document.querySelectorAll('.preset-tags-grid .preset-tag-btn').forEach(btn => btn.classList.remove('active'));
 
@@ -5762,84 +5766,66 @@ pause
     }
 
     async exportFinanceToCSV() {
-        if (!this.currentUser) {
-            this.triggerCSVDownload(this.financeData.expenses);
-            return;
-        }
-
-        try {
-            if (window.db && window.firestoreUtils) {
-                const { doc, getDoc } = window.firestoreUtils;
-                const userRef = doc(window.db, "users", this.currentUser.uid);
-                const docSnap = await getDoc(userRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const expenses = (data.financeData && data.financeData.expenses) || [];
-                    this.triggerCSVDownload(expenses);
-                } else {
-                    this.triggerCSVDownload(this.financeData.expenses);
-                }
-            } else {
-                this.triggerCSVDownload(this.financeData.expenses);
-            }
-        } catch (err) {
-            console.error("Error retrieving user finance data from Firestore:", err);
-            this.triggerCSVDownload(this.financeData.expenses);
-        }
-    }
-
-    triggerCSVDownload(expenses) {
-        if (!expenses || expenses.length === 0) {
+        // 1. تحديد المصاريف من الـ financeData المتاحة في الكلاس
+        const expenses = this.financeData.expenses || [];
+        if (expenses.length === 0) {
             alert("No logged purchases found to export.");
             return;
         }
 
-        const headers = ["Date", "Item Name", "Category", "Amount", "Description"];
-        
-        const escapeCSVValue = (val) => {
-            if (val === null || val === undefined) return "";
-            const strVal = String(val);
-            if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n") || strVal.includes("\r")) {
-                return `"${strVal.replace(/"/g, '""')}"`;
-            }
-            return strVal;
-        };
+        // 2. تحديث شكل الزرار (بافتراض إن الزرار بينادي الدالة دي مباشرة)
+        const btn = document.querySelector('[onclick*="exportFinanceToCSV"]');
+        const originalText = btn ? btn.innerText : 'Export';
+        if (btn) { btn.innerText = "Generating AI Report... ⏳"; btn.disabled = true; }
 
-        const csvRows = [];
-        csvRows.push(headers.join(","));
+        try {
+            // 3. طلب التقرير من الـ AI (استخدام الدالة اللي ضفناها)
+            const aiReport = await this.getFinancialAIReport(expenses);
 
-        expenses.forEach(exp => {
-            const date = new Date(exp.date);
-            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-            
-            const row = [
-                dateStr,
-                exp.name,
-                exp.category,
-                exp.amount,
-                exp.description || ""
-            ];
-            
-            csvRows.push(row.map(escapeCSVValue).join(","));
-        });
+            // 4. بناء ملف الـ CSV
+            const headers = ["Date", "Item Name", "Category", "Amount", "Description"];
+            const escapeCSVValue = (val) => {
+                if (val === null || val === undefined) return "";
+                const strVal = String(val);
+                return strVal.includes(",") || strVal.includes('"') || strVal.includes("\n")
+                    ? `"${strVal.replace(/"/g, '""')}"` : strVal;
+            };
 
-        const csvString = csvRows.join("\n");
-        const blob = new Blob(["\ufeff" + csvString], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Mornigami_Finance_Export_${new Date().toISOString().substring(0, 10)}.csv`);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+            const csvRows = [headers.join(",")];
+            expenses.forEach(exp => {
+                const date = new Date(exp.date);
+                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                csvRows.push([dateStr, exp.name, exp.category, exp.amount, exp.description || ""].map(escapeCSVValue).join(","));
+            });
+
+            // 5. دمج تقرير الـ AI في آخر الملف
+            const cleanReport = aiReport.replace(/"/g, '""');
+            csvRows.push(`\n\n"--- AI Financial Advisor Report ---"`);
+            csvRows.push(`"${cleanReport}"`);
+
+            // 6. تحميل الملف
+            const csvString = csvRows.join("\n");
+            const blob = new Blob(["\ufeff" + csvString], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `Mornigami_Finance_Report_${new Date().toISOString().substring(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+        } catch (err) {
+            console.error("Error during AI export:", err);
+            alert("حدث خطأ أثناء توليد التقرير أو التصدير.");
+        } finally {
+            // 7. رجوع الزرار لطبيعته
+            if (btn) { btn.innerText = originalText; btn.disabled = false; }
+        }
     }
 
     claimFinanceXP() {
         const todayDateStr = new Date().toDateString();
-        
+
         // Calculate today's spent
         const todayExpenses = this.financeData.expenses.filter(e => new Date(e.date).toDateString() === todayDateStr);
         const todaySpent = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -5866,7 +5852,7 @@ pause
         if (this.financeData.dailyBudget > 0 && yesterdaySpent <= this.financeData.dailyBudget && !this.financeData.xpBonusClaimedDates[yesterdayStr]) {
             this.financeData.xpBonusClaimedDates[yesterdayStr] = true;
             this.saveData('financeData', this.financeData);
-            
+
             // Trigger XP gain with slight delay to ensure UI is ready
             setTimeout(() => {
                 const rewardXP = this.xpConfig.financeBonus || 50;
@@ -5949,7 +5935,7 @@ pause
                 document.getElementById('financeActiveGoalStatus').innerHTML = `
                     Saved <strong>${currency} ${savingsBal.toLocaleString()}</strong> of <strong>${currency} ${goal.target.toLocaleString()}</strong> (Target: ${goal.duration} months).<br>
                     <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--color-border-light); font-size: 11px; color: var(--color-text-secondary);">
-                        <div><strong>Remaining:</strong> ${currency} ${remainingAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div><strong>Remaining:</strong> ${currency} ${remainingAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                         <div><strong>Required Savings:</strong> ${currency} ${dailySaving.toFixed(2)}/day • ${currency} ${weeklySaving.toFixed(2)}/week • ${currency} ${monthlySaving.toFixed(2)}/month</div>
                     </div>
                 `;
@@ -5999,12 +5985,12 @@ pause
         } else if (avgDailySpend > dailyLimit) {
             const remainingDays = remainingBalance / avgDailySpend;
             const depletionDay = currentDay + remainingDays;
-            
+
             if (depletionDay < totalDays) {
                 const depDayInt = Math.min(totalDays, Math.ceil(depletionDay));
                 const suffix = (day) => {
                     const s = ["th", "st", "nd", "rd"],
-                          v = day % 100;
+                        v = day % 100;
                     return day + (s[(v - 20) % 10] || s[v] || s[0]);
                 };
                 alertBanner.className = 'finance-alert warning';
@@ -6188,7 +6174,7 @@ pause
                             }
                         }
                     });
-                } catch(e) {
+                } catch (e) {
                     console.error("Error loading global metrics from DB:", e);
                 }
             }
@@ -6394,7 +6380,7 @@ pause
         }
 
         const planA = parseFloat((target / duration).toFixed(2));
-        
+
         // Accelerated plan (reach in 70% of duration)
         const durationB = Math.max(1, Math.ceil(duration * 0.7));
         const planB = parseFloat((target / durationB).toFixed(2));
@@ -6441,7 +6427,7 @@ pause
         nameInput.value = '';
         targetInput.value = '';
         durationInput.value = '';
-        
+
         const panel = document.getElementById('goalSuggestionsPanel');
         if (panel) panel.style.display = 'none';
 
@@ -6543,7 +6529,7 @@ pause
                             <div style="background: var(--color-primary); height: 100%; width: ${progressPct}%;"></div>
                         </div>
                         <div style="font-size: 10px; color: var(--color-text-secondary); line-height: 1.4;">
-                            <div><strong>Remaining:</strong> ${currency} ${remainingAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                            <div><strong>Remaining:</strong> ${currency} ${remainingAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                             <div><strong>Required:</strong> ${currency} ${dailySaving.toFixed(2)}/day • ${currency} ${weeklySaving.toFixed(2)}/week • ${currency} ${monthlySaving.toFixed(2)}/month</div>
                         </div>
                     </div>
@@ -6757,7 +6743,7 @@ pause
 
             const userData = userSnap.data();
             const finance = userData.financeData || {};
-            
+
             // Calculate remaining days from starting entryDate
             const startingDateVal = finance.startingDate || new Date().toISOString().substring(0, 10);
             const entryDateObj = new Date(startingDateVal);
@@ -6775,7 +6761,7 @@ pause
             }, { merge: true });
 
             alert("Financial overrides applied and saved successfully!");
-            
+
             // If the overridden user is the CURRENT active login user, sync local state!
             if (this.currentUser && this.currentUser.uid === userUid) {
                 this.financeData = finance;
@@ -6803,7 +6789,7 @@ pause
 
             const userData = userSnap.data();
             const finance = userData.financeData || {};
-            
+
             // Delete log
             finance.expenses = (finance.expenses || []).filter(e => e.id !== expenseId);
 
@@ -6835,6 +6821,28 @@ pause
         } catch (err) {
             console.error("Error deleting user expense via admin override:", err);
             alert("Failed to delete user transaction.");
+        }
+    }
+
+    async getFinancialAIReport(expensesArray) {
+        const apiKey = 'AQ.Ab8RN6LeB6-5yv8xPq3BB49fDyqRQjqhEnP5gYOrqe-QBIbQLg';
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+        const expensesText = JSON.stringify(expensesArray);
+        const prompt = `أنا بستخدم تطبيق Mornigami لتتبع مصاريفي. دي قائمة مشترياتي الأخيرة: ${expensesText}. 
+        بصفتك مستشار مالي محترف، حلل الأرقام والتصنيفات دي، واكتب تقرير ملخص من 3 سطور، واديني نصيحة عملية لتحسين ميزانيتي وتقليل النفقات باللغة العربية.`;
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "لا توجد نصيحة حالياً.";
+        } catch (error) {
+            console.error("AI Error:", error);
+            return "خطأ في الاتصال بالذكاء الاصطناعي.";
         }
     }
 }
