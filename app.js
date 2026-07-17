@@ -5476,6 +5476,82 @@ pause
         }
     }
 
+    async exportFinanceToCSV() {
+        if (!this.currentUser) {
+            this.triggerCSVDownload(this.financeData.expenses);
+            return;
+        }
+
+        try {
+            if (window.db && window.firestoreUtils) {
+                const { doc, getDoc } = window.firestoreUtils;
+                const userRef = doc(window.db, "users", this.currentUser.uid);
+                const docSnap = await getDoc(userRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const expenses = (data.financeData && data.financeData.expenses) || [];
+                    this.triggerCSVDownload(expenses);
+                } else {
+                    this.triggerCSVDownload(this.financeData.expenses);
+                }
+            } else {
+                this.triggerCSVDownload(this.financeData.expenses);
+            }
+        } catch (err) {
+            console.error("Error retrieving user finance data from Firestore:", err);
+            this.triggerCSVDownload(this.financeData.expenses);
+        }
+    }
+
+    triggerCSVDownload(expenses) {
+        if (!expenses || expenses.length === 0) {
+            alert("No logged purchases found to export.");
+            return;
+        }
+
+        const headers = ["Date", "Item Name", "Category", "Amount", "Description"];
+        
+        const escapeCSVValue = (val) => {
+            if (val === null || val === undefined) return "";
+            const strVal = String(val);
+            if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n") || strVal.includes("\r")) {
+                return `"${strVal.replace(/"/g, '""')}"`;
+            }
+            return strVal;
+        };
+
+        const csvRows = [];
+        csvRows.push(headers.join(","));
+
+        expenses.forEach(exp => {
+            const date = new Date(exp.date);
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            
+            const row = [
+                dateStr,
+                exp.name,
+                exp.category,
+                exp.amount,
+                exp.description || ""
+            ];
+            
+            csvRows.push(row.map(escapeCSVValue).join(","));
+        });
+
+        const csvString = csvRows.join("\n");
+        const blob = new Blob(["\ufeff" + csvString], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Mornigami_Finance_Export_${new Date().toISOString().substring(0, 10)}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
     claimFinanceXP() {
         const todayDateStr = new Date().toDateString();
         
