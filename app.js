@@ -3832,8 +3832,16 @@ pause
         const scaleBountyHours = document.getElementById('bountyExpireHours');
         if (scaleBountyHours && this.xpConfig) scaleBountyHours.value = this.xpConfig.bountyExpireHours || 24;
 
+        const scaleBountiesEnabled = document.getElementById('xpScaleBountiesEnabled');
+        if (scaleBountiesEnabled && this.xpConfig) {
+            scaleBountiesEnabled.checked = this.xpConfig.bountiesEnabled !== false;
+        }
+
         // Load active challenges
         this.loadAdminActiveChallenges();
+
+        // Load global daily bounties templates inside admin panel
+        this.loadAdminDailyBounties();
     }
 
     async loadAdminActiveChallenges() {
@@ -3862,6 +3870,161 @@ pause
         } catch (err) {
             console.error("Error loading admin challenges:", err);
             listEl.innerHTML = '<p style="color: var(--color-danger);">Error loading challenges.</p>';
+        }
+    }
+
+    async loadAdminDailyBounties() {
+        const container = document.getElementById('adminBountiesContainer');
+        if (!container) return;
+
+        container.innerHTML = '<div class="admin-loading">Loading daily bounties...</div>';
+
+        try {
+            if (window.db && window.firestoreUtils) {
+                const { doc, getDoc } = window.firestoreUtils;
+                const snap = await getDoc(doc(window.db, "settings", "daily_bounties"));
+                if (snap.exists()) {
+                    this.globalBountiesTemplate = snap.data().bounties || [];
+                } else {
+                    this.globalBountiesTemplate = [
+                        { id: 'bounty_pomodoro', text: '🍅 Pomodoro Blitz: Complete a Focus Session today', reward: 300, countNeeded: 1, type: 'pomodoro' },
+                        { id: 'bounty_habits', text: '⚡ Habit Crease: Complete 3 habits today', reward: 200, countNeeded: 3, type: 'habits' },
+                        { id: 'bounty_todo', text: '📝 Task Fold: Complete 2 checklist tasks today', reward: 150, countNeeded: 2, type: 'tasks' }
+                    ];
+                }
+            }
+        } catch (err) {
+            console.error("Error loading global daily bounties:", err);
+        }
+
+        this.renderAdminDailyBountiesList();
+    }
+
+    renderAdminDailyBountiesList() {
+        const container = document.getElementById('adminBountiesContainer');
+        if (!container) return;
+
+        if (!this.globalBountiesTemplate || this.globalBountiesTemplate.length === 0) {
+            container.innerHTML = '<p style="font-size: 12px; color: var(--color-text-secondary); text-align: center; margin: var(--spacing-sm) 0;">No daily bounties configured. Default fallbacks will be used.</p>';
+            return;
+        }
+
+        container.innerHTML = this.globalBountiesTemplate.map((b, index) => {
+            const isFirst = index === 0;
+            const isLast = index === this.globalBountiesTemplate.length - 1;
+            return `
+                <div class="admin-bounty-row" style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-sm); background: var(--color-bg); border: 1.5px solid var(--color-border); border-radius: var(--radius-md); gap: var(--spacing-xs); margin-bottom: 4px;">
+                     <div style="flex: 1; min-width: 0;">
+                         <div style="font-weight: 700; font-size: 12px; color: var(--color-text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${this.escapeHtml(b.text)}</div>
+                         <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 2px;">
+                             Type: <strong>${b.type}</strong> • Target: <strong>${b.countNeeded}</strong> • Reward: <strong style="color: var(--color-warning);">+${b.reward} XP</strong>
+                         </div>
+                     </div>
+                     <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                         <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; height: 26px; min-width: auto;" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : `onclick="app.moveAdminBounty(${index}, -1)"`} title="Move Up">🔼</button>
+                         <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; height: 26px; min-width: auto;" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : `onclick="app.moveAdminBounty(${index}, 1)"`} title="Move Down">🔽</button>
+                         <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; height: 26px; min-width: auto; font-weight: 700; color: var(--color-primary);" onclick="app.startEditAdminBounty(${index})" title="Edit Bounty">✏️</button>
+                         <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; height: 26px; min-width: auto; font-weight: 700; color: var(--color-danger);" onclick="app.deleteAdminBounty(${index})" title="Delete Bounty">❌</button>
+                     </div>
+                 </div>
+            `;
+        }).join('');
+    }
+
+    async moveAdminBounty(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= this.globalBountiesTemplate.length) return;
+
+        const temp = this.globalBountiesTemplate[index];
+        this.globalBountiesTemplate[index] = this.globalBountiesTemplate[newIndex];
+        this.globalBountiesTemplate[newIndex] = temp;
+
+        await this.saveGlobalBountiesTemplate();
+    }
+
+    async deleteAdminBounty(index) {
+        if (!confirm("Are you sure you want to delete this daily bounty?")) return;
+        this.globalBountiesTemplate.splice(index, 1);
+        await this.saveGlobalBountiesTemplate();
+        this.cancelAdminBountyEdit();
+    }
+
+    async saveAdminBounty(e) {
+        if (e) e.preventDefault();
+
+        const idxInput = document.getElementById('adminBountyIndex');
+        const textInput = document.getElementById('adminBountyText');
+        const rewardInput = document.getElementById('adminBountyReward');
+        const countInput = document.getElementById('adminBountyCount');
+        const typeInput = document.getElementById('adminBountyType');
+
+        if (!idxInput || !textInput || !rewardInput || !countInput || !typeInput) return;
+
+        const index = parseInt(idxInput.value);
+        const text = textInput.value.trim();
+        const reward = parseInt(rewardInput.value);
+        const countNeeded = parseInt(countInput.value);
+        const type = typeInput.value;
+
+        if (!text || isNaN(reward) || reward <= 0 || isNaN(countNeeded) || countNeeded <= 0) return;
+
+        const bountyData = {
+            id: index >= 0 ? this.globalBountiesTemplate[index].id : `bounty_${Date.now()}`,
+            text: text,
+            reward: reward,
+            countNeeded: countNeeded,
+            type: type
+        };
+
+        if (index >= 0) {
+            this.globalBountiesTemplate[index] = bountyData;
+        } else {
+            this.globalBountiesTemplate.push(bountyData);
+        }
+
+        await this.saveGlobalBountiesTemplate();
+        this.cancelAdminBountyEdit();
+    }
+
+    startEditAdminBounty(index) {
+        const b = this.globalBountiesTemplate[index];
+        if (!b) return;
+
+        document.getElementById('adminBountyIndex').value = index;
+        document.getElementById('adminBountyText').value = b.text;
+        document.getElementById('adminBountyReward').value = b.reward;
+        document.getElementById('adminBountyCount').value = b.countNeeded;
+        document.getElementById('adminBountyType').value = b.type || (b.id.includes('pomodoro') ? 'pomodoro' : b.id.includes('habits') ? 'habits' : 'tasks');
+
+        document.getElementById('adminBountyFormTitle').textContent = "✏️ Edit Daily Bounty";
+        document.getElementById('adminBountySubmitBtn').textContent = "Save Changes";
+        document.getElementById('adminBountyCancelBtn').style.display = 'block';
+    }
+
+    cancelAdminBountyEdit() {
+        document.getElementById('adminBountyIndex').value = "-1";
+        document.getElementById('adminBountyText').value = "";
+        document.getElementById('adminBountyReward').value = "100";
+        document.getElementById('adminBountyCount').value = "1";
+        document.getElementById('adminBountyType').value = "pomodoro";
+
+        document.getElementById('adminBountyFormTitle').textContent = "➕ Add New Daily Bounty";
+        document.getElementById('adminBountySubmitBtn').textContent = "Add Bounty";
+        document.getElementById('adminBountyCancelBtn').style.display = 'none';
+    }
+
+    async saveGlobalBountiesTemplate() {
+        if (!window.db || !window.firestoreUtils) return;
+        const { doc, setDoc } = window.firestoreUtils;
+
+        try {
+            await setDoc(doc(window.db, "settings", "daily_bounties"), {
+                bounties: this.globalBountiesTemplate
+            });
+            this.renderAdminDailyBountiesList();
+        } catch (err) {
+            console.error("Error saving global daily bounties template:", err);
+            alert("Failed to save daily bounties template globally.");
         }
     }
 
@@ -4211,6 +4374,7 @@ pause
         const videoVal = parseInt(document.getElementById('xpScaleVideo').value) || 40;
         const baseVal = parseInt(document.getElementById('xpScaleBase').value) || 500;
         const bountyHoursVal = parseInt(document.getElementById('bountyExpireHours').value) || 24;
+        const bountiesEnabledVal = document.getElementById('xpScaleBountiesEnabled').checked;
 
         try {
             const { doc, setDoc } = window.firestoreUtils;
@@ -4221,7 +4385,8 @@ pause
                 video: videoVal,
                 groupBonus: 200,
                 levelBase: baseVal,
-                bountyExpireHours: bountyHoursVal
+                bountyExpireHours: bountyHoursVal,
+                bountiesEnabled: bountiesEnabledVal
             }, { merge: true });
 
             alert("Dynamic XP Scaling configurations updated globally!");
@@ -4510,12 +4675,29 @@ pause
                     groupBonus: data.groupBonus || 200,
                     levelBase: data.levelBase || 500,
                     bountyExpireHours: data.bountyExpireHours || 24,
-                    financeBonus: data.financeBonus || 50
+                    financeBonus: data.financeBonus || 50,
+                    bountiesEnabled: data.bountiesEnabled !== false
                 };
                 this.updateXPUI();
+                
+                // Dynamically update daily bounties visibility on dashboard
+                const section = document.getElementById('dailyBountiesSection');
+                if (section) {
+                    section.style.display = this.xpConfig.bountiesEnabled ? 'block' : 'none';
+                }
             }
         } catch (err) {
             console.error("Error loading scaling settings:", err);
+        }
+
+        // Load global daily bounties templates
+        try {
+            const bountiesSnap = await getDoc(doc(window.db, "settings", "daily_bounties"));
+            if (bountiesSnap.exists()) {
+                this.globalBountiesTemplate = bountiesSnap.data().bounties || [];
+            }
+        } catch (err) {
+            console.error("Error loading global daily bounties templates:", err);
         }
 
         // 2. Load System-Wide Announcement
@@ -4799,11 +4981,25 @@ pause
                 dateStr: dateStr,
                 generationTime: now.getTime()
             };
-            this.dailyBounties = [
-                { id: 'bounty_pomodoro', text: '🍅 Pomodoro Blitz: Complete a Focus Session today', reward: 300, completed: false, countNeeded: 1, currentCount: 0 },
-                { id: 'bounty_habits', text: '⚡ Habit Crease: Complete 3 habits today', reward: 200, completed: false, countNeeded: 3, currentCount: 0 },
-                { id: 'bounty_todo', text: '📝 Task Fold: Complete 2 checklist tasks today', reward: 150, completed: false, countNeeded: 2, currentCount: 0 }
-            ];
+            
+            const templates = (this.globalBountiesTemplate && this.globalBountiesTemplate.length > 0)
+                ? this.globalBountiesTemplate
+                : [
+                    { id: 'bounty_pomodoro', text: '🍅 Pomodoro Blitz: Complete a Focus Session today', reward: 300, countNeeded: 1, type: 'pomodoro' },
+                    { id: 'bounty_habits', text: '⚡ Habit Crease: Complete 3 habits today', reward: 200, countNeeded: 3, type: 'habits' },
+                    { id: 'bounty_todo', text: '📝 Task Fold: Complete 2 checklist tasks today', reward: 150, countNeeded: 2, type: 'tasks' }
+                ];
+            
+            this.dailyBounties = templates.map(t => ({
+                id: t.id,
+                text: t.text,
+                reward: t.reward,
+                countNeeded: t.countNeeded,
+                type: t.type || (t.id.includes('pomodoro') ? 'pomodoro' : t.id.includes('habits') ? 'habits' : 'tasks'),
+                currentCount: 0,
+                completed: false
+            }));
+
             this.saveData('bountyStats', this.bountyStats);
             this.saveData('dailyBounties', this.dailyBounties);
         } else {
@@ -4813,6 +5009,12 @@ pause
     }
 
     updateBountyCountdown() {
+        const enabled = this.xpConfig ? this.xpConfig.bountiesEnabled !== false : true;
+        if (!enabled) {
+            const section = document.getElementById('dailyBountiesSection');
+            if (section) section.style.display = 'none';
+            return;
+        }
         if (!this.bountyStats || !this.bountyStats.generationTime) return;
         const now = new Date();
         
@@ -4838,6 +5040,13 @@ pause
     }
 
     renderDailyBounties() {
+        const section = document.getElementById('dailyBountiesSection');
+        const enabled = this.xpConfig ? this.xpConfig.bountiesEnabled !== false : true;
+        if (section) {
+            section.style.display = enabled ? 'block' : 'none';
+        }
+        if (!enabled) return;
+
         const el = document.getElementById('dailyBountiesList');
         if (!el) return;
         

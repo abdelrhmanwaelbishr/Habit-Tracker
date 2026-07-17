@@ -690,7 +690,7 @@
             </section>
 
             <!-- Daily Bounties Panel -->
-            <section class="daily-bounties-section" style="margin-bottom: var(--spacing-xl);">
+            <section class="daily-bounties-section" id="dailyBountiesSection" style="margin-bottom: var(--spacing-xl);">
                 <div class="daily-bounties-card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(239, 68, 68, 0.08)); border: 2px solid var(--color-warning); border-radius: var(--radius-xl); padding: var(--spacing-lg);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
                         <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
@@ -2081,6 +2081,10 @@
                                             <input type="number" id="bountyExpireHours" class="admin-input" required min="1" max="168"
                                                 value="24">
                                         </div>
+                                        <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0; display: flex; align-items: center; gap: 8px; margin-top: var(--spacing-xs);">
+                                            <input type="checkbox" id="xpScaleBountiesEnabled" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                            <label for="xpScaleBountiesEnabled" style="font-size: 11px; font-weight: 700; cursor: pointer; margin-bottom: 0; user-select: none;">Enable Daily Bounties Section for All Users</label>
+                                        </div>
                                     </div>
                                     <button type="submit" class="btn-primary" style="width: 100%;">Save Global
                                         Constants</button>
@@ -2155,6 +2159,52 @@
                                     <button type="submit" class="btn-primary" style="width: 100%;">Award Badge
                                         Immediately</button>
                                 </form>
+                            </div>
+
+                            <!-- Daily Bounties Manager -->
+                            <div class="admin-card"
+                                style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--spacing-xl); display: flex; flex-direction: column; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                                <h3
+                                    style="font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
+                                    🎯 Daily Bounties Manager
+                                </h3>
+                                
+                                <div id="adminBountiesContainer" style="display: flex; flex-direction: column; gap: var(--spacing-xs); margin-bottom: var(--spacing-sm);">
+                                    <!-- Dynamic Daily Bounties list for admin -->
+                                </div>
+                                
+                                <div style="border-top: 1.5px dashed var(--color-border); padding-top: var(--spacing-sm);">
+                                    <h4 style="font-size: 12px; font-weight: 700; margin-bottom: var(--spacing-xs);" id="adminBountyFormTitle">➕ Add New Daily Bounty</h4>
+                                    <form id="adminBountyForm" onsubmit="app.saveAdminBounty(event)" style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                                        <input type="hidden" id="adminBountyIndex" value="-1">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 10px;">Bounty Text & Icon</label>
+                                            <input type="text" id="adminBountyText" class="admin-input" required placeholder="e.g. 🍅 Pomodoro Blitz: Complete a Focus Session">
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-xs);">
+                                            <div class="form-group" style="margin-bottom: 0;">
+                                                <label style="font-size: 10px;">XP Reward</label>
+                                                <input type="number" id="adminBountyReward" class="admin-input" required min="10" value="100">
+                                            </div>
+                                            <div class="form-group" style="margin-bottom: 0;">
+                                                <label style="font-size: 10px;">Target Count</label>
+                                                <input type="number" id="adminBountyCount" class="admin-input" required min="1" value="1">
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 10px;">Activity Type Trigger</label>
+                                            <select id="adminBountyType" class="admin-role-select" required style="height: 38px;">
+                                                <option value="pomodoro">Focus Session (pomodoro)</option>
+                                                <option value="habits">Habit checked (habits)</option>
+                                                <option value="tasks">Task completed (tasks)</option>
+                                            </select>
+                                        </div>
+                                        <div style="display: flex; gap: var(--spacing-xs); margin-top: var(--spacing-xs);">
+                                            <button type="submit" class="btn-primary" style="flex: 1; height: 38px; justify-content: center;" id="adminBountySubmitBtn">Add Bounty</button>
+                                            <button type="button" class="btn-secondary" style="height: 38px; display: none;" id="adminBountyCancelBtn" onclick="app.cancelAdminBountyEdit()">Cancel</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
 
                             <!-- List of Active Global Challenges -->
