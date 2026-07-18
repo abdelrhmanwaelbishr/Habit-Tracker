@@ -113,11 +113,21 @@ class ProductivityHub {
             dailyBudget: 0,
             expenses: [],
             xpBonusClaimedDates: {},
-            categories: ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗']
+            categories: ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'],
+            currency: 'EGP',
+            savingsBalance: 0,
+            savingsGoals: [],
+            activeGoal: null
         };
         if (!this.financeData.categories || this.financeData.categories.length === 0) {
             this.financeData.categories = ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'];
         }
+        this.financeData.currency = this.financeData.currency || 'EGP';
+        this.financeData.savingsBalance = this.financeData.savingsBalance || 0;
+        this.financeData.savingsGoals = this.financeData.savingsGoals || [];
+        this.financeData.activeGoal = this.financeData.activeGoal || null;
+
+        this.isCloudDataLoaded = false;
 
         this.init();
     }
@@ -3247,11 +3257,21 @@ pause
                         this.updateXPUI();
                         this.updateBadgeUI();
 
-                        if (data.financeData) {
-                            this.financeData = data.financeData;
-                            this.saveData('financeData', this.financeData);
-                            this.checkYesterdayFinanceXP();
-                        }
+                        // Safe financeData extraction and normalization
+                        this.financeData = {
+                            monthYear: (data.financeData && data.financeData.monthYear) || '',
+                            monthlyIncome: (data.financeData && data.financeData.monthlyIncome) || 0,
+                            dailyBudget: (data.financeData && data.financeData.dailyBudget) || 0,
+                            expenses: (data.financeData && data.financeData.expenses) || [],
+                            xpBonusClaimedDates: (data.financeData && data.financeData.xpBonusClaimedDates) || {},
+                            categories: (data.financeData && data.financeData.categories) || ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'],
+                            currency: (data.financeData && data.financeData.currency) || 'EGP',
+                            savingsBalance: (data.financeData && data.financeData.savingsBalance) || 0,
+                            savingsGoals: (data.financeData && data.financeData.savingsGoals) || [],
+                            activeGoal: (data.financeData && data.financeData.activeGoal) || null
+                        };
+                        this.saveData('financeData', this.financeData);
+                        this.checkYesterdayFinanceXP();
 
                         // Load user role (RBAC)
                         if (data.role) {
@@ -3287,13 +3307,32 @@ pause
                         } else {
                             this.removeLockoutScreen();
                         }
-
-                        // إعادة رندر الصفحة بالبيانات الجديدة
-                        this.renderPage(this.currentPage);
+                    } else {
+                        // User document doesn't exist yet (first time registration/login)
+                        this.financeData = {
+                            monthYear: '',
+                            monthlyIncome: 0,
+                            dailyBudget: 0,
+                            expenses: [],
+                            xpBonusClaimedDates: {},
+                            categories: ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'],
+                            currency: 'EGP',
+                            savingsBalance: 0,
+                            savingsGoals: [],
+                            activeGoal: null
+                        };
+                        this.saveData('financeData', this.financeData);
                     }
                 } catch (err) {
                     console.error("Error loading from cloud:", err);
+                } finally {
+                    this.isCloudDataLoaded = true;
+                    this.renderPage(this.currentPage);
                 }
+            } else {
+                // Offline mode, no Firestore, so cloud data is loaded immediately
+                this.isCloudDataLoaded = true;
+                this.renderPage(this.currentPage);
             }
 
         } else {
@@ -3763,7 +3802,7 @@ pause
     // دالة لتصفير بيانات التطبيق بالكامل محلياً
     clearAllLocalData() {
         // 1. مسح البيانات من الـ localStorage
-        const keysToClear = ['habits', 'tasks', 'playlists', 'pomodoroStats', 'motivationalSettings', 'userLevel', 'userXP', 'spentXP', 'unlockedItems', 'activeAvatar', 'activeBorder', 'friendsList'];
+        const keysToClear = ['habits', 'tasks', 'playlists', 'pomodoroStats', 'motivationalSettings', 'userLevel', 'userXP', 'spentXP', 'unlockedItems', 'activeAvatar', 'activeBorder', 'friendsList', 'financeData'];
         keysToClear.forEach(key => localStorage.removeItem(key));
 
         // 2. إعادة تعيين متغيرات التطبيق في الذاكرة لقيمها الافتراضية
@@ -3789,6 +3828,22 @@ pause
         this.activeBorder = '';
         this.friendsList = [];
         this.userBadges = [];
+
+        // Reset Finance Data
+        this.financeData = {
+            monthYear: '',
+            monthlyIncome: 0,
+            dailyBudget: 0,
+            expenses: [],
+            xpBonusClaimedDates: {},
+            categories: ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'],
+            currency: 'EGP',
+            savingsBalance: 0,
+            savingsGoals: [],
+            activeGoal: null
+        };
+        this.isCloudDataLoaded = false;
+
         this.updateXPUI();
         this.updateBadgeUI();
 
@@ -5599,15 +5654,14 @@ pause
 
     saveFinanceData() {
         this.saveData('financeData', this.financeData);
-        if (this.currentUser && window.db && window.firestoreUtils) {
-            const { doc, setDoc } = window.firestoreUtils;
-            setDoc(doc(window.db, "users", this.currentUser.uid), {
-                financeData: this.financeData
-            }, { merge: true }).catch(err => console.error("Error saving finance data to firestore:", err));
-        }
     }
 
     initFinancePage() {
+        if (this.currentUser && !this.isCloudDataLoaded) {
+            console.log("initFinancePage: Waiting for Firestore data to load...");
+            return;
+        }
+
         const currentMonthYear = new Date().toISOString().substring(0, 7); // YYYY-MM
 
         // If current month is different, auto-reset for new month
