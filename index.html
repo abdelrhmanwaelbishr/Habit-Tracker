@@ -877,16 +877,16 @@
                 <!-- Gamification Reward Card -->
                 <div class="finance-card xp-claim-card" id="financeXPRewardCard" style="text-align: center; margin-bottom: var(--spacing-lg);">
                     <h3 style="font-family: var(--font-display); font-size: var(--font-size-md); font-weight: 700; color: var(--color-success); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                        🎮 Mindful Spending Reward
+                        🎮 Yesterday's Budget Reward
                     </h3>
                     <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--spacing-md); line-height: 1.4;">
-                        Stay under your daily recommended limit to earn a bonus of <strong>+50 XP</strong>. Best claimed when you finish logging for the day!
+                        Stay under your daily recommended limit yesterday to earn a bonus of <strong>+250 XP</strong>.
                     </p>
                     <div style="margin-bottom: var(--spacing-md);">
                         <span id="financeXPRewardStatusText" style="font-weight: 700; font-size: var(--font-size-sm); color: var(--color-text-primary);">XP reward loading...</span>
                     </div>
                     <button id="claimFinanceXPBtn" class="btn-primary" onclick="app.claimFinanceXP()" style="width: 100%; justify-content: center; font-weight: 700; background: var(--color-success); border-color: var(--color-success);">
-                        Claim +50 XP
+                        Claim Yesterday's Budget Bonus (+250 XP)
                     </button>
                 </div>
 
@@ -900,7 +900,7 @@
                             <form id="logExpenseForm" onsubmit="app.handleLogExpense(event)" style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
                                 <div class="form-group" style="margin-bottom: var(--spacing-xs);">
                                     <label for="expenseNameInput" class="form-label">Purchase / Item Name</label>
-                                    <input type="text" id="expenseNameInput" class="form-input" required autocomplete="off">
+                                    <input type="text" id="expenseNameInput" class="form-input" required autocomplete="off" oninput="app.autoSetFormClassification()">
                                 </div>
                                 <div class="form-group" style="margin-bottom: var(--spacing-xs);">
                                     <label for="expenseDescInput" class="form-label">Description / Detail</label>
@@ -943,6 +943,20 @@
                                     <input type="hidden" id="selectedExpenseCategory" value="">
                                 </div>
 
+                                 <!-- Needs vs. Wants Selector Override -->
+                                 <div class="form-group" style="margin-bottom: var(--spacing-xs);">
+                                     <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Wants / Needs Classification</label>
+                                     <div class="classification-toggle-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                         <button type="button" id="formClassifyNeedBtn" class="form-classify-btn active" onclick="app.setFormExpenseClassification(true)" style="padding: 8px 12px; font-size: var(--font-size-xs); font-weight: 700; border-radius: var(--radius-md); cursor: pointer; border: 1.5px solid var(--color-border); background: var(--color-surface); transition: all 0.2s;">
+                                             ⭐️ Need (Essential)
+                                         </button>
+                                         <button type="button" id="formClassifyWantBtn" class="form-classify-btn" onclick="app.setFormExpenseClassification(false)" style="padding: 8px 12px; font-size: var(--font-size-xs); font-weight: 700; border-radius: var(--radius-md); cursor: pointer; border: 1.5px solid var(--color-border); background: var(--color-surface); transition: all 0.2s;">
+                                             💭 Want (Lifestyle)
+                                         </button>
+                                     </div>
+                                     <input type="hidden" id="formExpenseIsEssential" value="true">
+                                 </div>
+
                                 <button type="submit" class="btn-primary" style="justify-content: center; height: 44px; font-weight: 700; margin-top: var(--spacing-xs);">
                                     Log Purchase
                                 </button>
@@ -960,13 +974,22 @@
                                 <span id="financeSavingsVaultVal" style="font-weight: 800; font-size: var(--font-size-2xl); color: var(--color-success); display: block;">EGP 0.00</span>
                             </div>
 
-                            <!-- Transfer to Savings Vault -->
-                            <form id="transferSavingsForm" onsubmit="app.handleTransferToSavings(event)" style="display: flex; gap: var(--spacing-xs); align-items: flex-end;">
-                                <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                    <label for="transferSavingsAmount" class="form-label" style="font-size: 11px;">Transfer to Savings Vault</label>
-                                    <input type="number" id="transferSavingsAmount" class="form-input" step="0.01" min="0.01" placeholder="0.00" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg);">
+                            <!-- Transfer between Account and Vault -->
+                            <form id="transferSavingsForm" onsubmit="app.handleTransferSavings(event)" style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--spacing-xs); align-items: flex-end;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="transferDirection" class="form-label" style="font-size: 11px;">Transaction Type</label>
+                                        <select id="transferDirection" class="form-input" style="height: 38px; padding: 0 10px; font-size: var(--font-size-xs); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg); font-weight: 600;">
+                                            <option value="deposit">📥 Deposit to Vault</option>
+                                            <option value="withdraw">📤 Withdraw to Account</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="transferSavingsAmount" class="form-label" style="font-size: 11px;">Amount</label>
+                                        <input type="number" id="transferSavingsAmount" class="form-input" step="0.01" min="0.01" placeholder="0.00" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg);">
+                                    </div>
                                 </div>
-                                <button type="submit" class="btn-primary" style="font-size: var(--font-size-xs); padding: 0 var(--spacing-md); height: 38px; font-weight: 700; background: var(--color-success); border-color: var(--color-success);">Transfer</button>
+                                <button type="submit" class="btn-primary" style="font-size: var(--font-size-xs); padding: 0 var(--spacing-md); height: 38px; font-weight: 700; justify-content: center; background: var(--color-success); border-color: var(--color-success);">Confirm Transfer</button>
                             </form>
                         </div>
                     </div>
@@ -1070,6 +1093,22 @@
                                     Set Active Goal
                                 </button>
                             </form>
+                        </div>
+
+                        <!-- Smart Savings Recommendations -->
+                        <div class="finance-card">
+                            <h3 class="finance-card-title">💡 Smart Savings Suggestions</h3>
+                            <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--spacing-md); line-height: 1.4;">
+                                Our smart engine analyzes your logged lifestyle purchases (Wants) to suggest adjustments that help you reach your goals.
+                            </p>
+                            
+                            <div id="financeRecommendationsContainer">
+                                <!-- Populated dynamically by app.renderSavingsRecommendations() -->
+                                <div style="padding: var(--spacing-md); text-align: center; color: var(--color-text-tertiary); font-size: var(--font-size-sm);">
+                                    <div style="font-size: 1.75rem; margin-bottom: 4px;">💡</div>
+                                    <p style="margin: 0;">Log a few more purchases to receive personalized smart savings suggestions.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -126,6 +126,12 @@ class ProductivityHub {
         this.financeData.savingsBalance = this.financeData.savingsBalance || 0;
         this.financeData.savingsGoals = this.financeData.savingsGoals || [];
         this.financeData.activeGoal = this.financeData.activeGoal || null;
+        this.financeData.essentialCategories = this.financeData.essentialCategories || {
+            'Diet & Groceries 🍏': true,
+            'Transportation 🚗': true
+        };
+        this.financeData.itemPreferences = this.financeData.itemPreferences || {};
+        this.financeData.lastClaimedBonusDate = this.financeData.lastClaimedBonusDate || '';
 
         this.isCloudDataLoaded = false;
 
@@ -3268,10 +3274,15 @@ pause
                             currency: (data.financeData && data.financeData.currency) || 'EGP',
                             savingsBalance: (data.financeData && data.financeData.savingsBalance) || 0,
                             savingsGoals: (data.financeData && data.financeData.savingsGoals) || [],
-                            activeGoal: (data.financeData && data.financeData.activeGoal) || null
+                            activeGoal: (data.financeData && data.financeData.activeGoal) || null,
+                            essentialCategories: (data.financeData && data.financeData.essentialCategories) || {
+                                'Diet & Groceries 🍏': true,
+                                'Transportation 🚗': true
+                            },
+                            itemPreferences: (data.financeData && data.financeData.itemPreferences) || {},
+                            lastClaimedBonusDate: (data.financeData && data.financeData.lastClaimedBonusDate) || ''
                         };
                         this.saveData('financeData', this.financeData);
-                        this.checkYesterdayFinanceXP();
 
                         // Load user role (RBAC)
                         if (data.role) {
@@ -3319,7 +3330,13 @@ pause
                             currency: 'EGP',
                             savingsBalance: 0,
                             savingsGoals: [],
-                            activeGoal: null
+                            activeGoal: null,
+                            essentialCategories: {
+                                'Diet & Groceries 🍏': true,
+                                'Transportation 🚗': true
+                            },
+                            itemPreferences: {},
+                            lastClaimedBonusDate: ''
                         };
                         this.saveData('financeData', this.financeData);
                     }
@@ -3840,7 +3857,13 @@ pause
             currency: 'EGP',
             savingsBalance: 0,
             savingsGoals: [],
-            activeGoal: null
+            activeGoal: null,
+            essentialCategories: {
+                'Diet & Groceries 🍏': true,
+                'Transportation 🚗': true
+            },
+            itemPreferences: {},
+            lastClaimedBonusDate: ''
         };
         this.isCloudDataLoaded = false;
 
@@ -5673,9 +5696,16 @@ pause
                 expenses: [],
                 xpBonusClaimedDates: {},
                 categories: this.financeData.categories || ['Coffee ☕', 'Diet & Groceries 🍏', 'Gaming 🎮', 'PC Accessories 💻', 'Transportation 🚗'],
-                currency: 'EGP',
-                savingsBalance: 0,
-                savingsGoals: []
+                currency: this.financeData.currency || 'EGP',
+                savingsBalance: this.financeData.savingsBalance || 0,
+                savingsGoals: this.financeData.savingsGoals || [],
+                activeGoal: this.financeData.activeGoal || null,
+                essentialCategories: this.financeData.essentialCategories || {
+                    'Diet & Groceries 🍏': true,
+                    'Transportation 🚗': true
+                },
+                itemPreferences: this.financeData.itemPreferences || {},
+                lastClaimedBonusDate: this.financeData.lastClaimedBonusDate || ''
             };
             this.saveFinanceData();
         }
@@ -5700,7 +5730,6 @@ pause
             setupContainer.style.display = 'none';
             dashboardContainer.style.display = 'block';
             headerActions.style.display = 'flex';
-            this.checkYesterdayFinanceXP();
             this.renderFinanceDashboard();
         }
     }
@@ -5771,6 +5800,50 @@ pause
         if (catInput) {
             catInput.value = category;
         }
+
+        // Auto-set Wants/Needs based on selection
+        this.autoSetFormClassification();
+    }
+
+    setFormExpenseClassification(isEssential) {
+        const needBtn = document.getElementById('formClassifyNeedBtn');
+        const wantBtn = document.getElementById('formClassifyWantBtn');
+        const hiddenInput = document.getElementById('formExpenseIsEssential');
+
+        if (needBtn && wantBtn && hiddenInput) {
+            hiddenInput.value = isEssential ? 'true' : 'false';
+            if (isEssential) {
+                needBtn.classList.add('active');
+                wantBtn.classList.remove('active');
+            } else {
+                needBtn.classList.remove('active');
+                wantBtn.classList.add('active');
+            }
+        }
+    }
+
+    autoSetFormClassification() {
+        const nameInput = document.getElementById('expenseNameInput');
+        const catInput = document.getElementById('selectedExpenseCategory');
+        if (!nameInput) return;
+
+        const name = nameInput.value.trim();
+        const category = catInput ? catInput.value : '';
+
+        // 1. Check if there's a learned preference for this item name
+        const cleanName = name.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, '').trim().toLowerCase();
+        if (cleanName && this.financeData.itemPreferences && this.financeData.itemPreferences[cleanName] !== undefined) {
+            this.setFormExpenseClassification(this.financeData.itemPreferences[cleanName]);
+            return;
+        }
+
+        // 2. Otherwise default to the category essential status
+        if (category) {
+            this.setFormExpenseClassification(this.isCategoryEssential(category));
+        } else {
+            // default to Need
+            this.setFormExpenseClassification(true);
+        }
     }
 
     handleLogExpense(event) {
@@ -5792,14 +5865,24 @@ pause
 
         if (!name || !description || isNaN(amount) || amount <= 0) return;
 
+        const isEssentialInput = document.getElementById('formExpenseIsEssential');
+        const isEssential = isEssentialInput ? (isEssentialInput.value === 'true') : this.isCategoryEssential(category);
+
         const expense = {
             id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             name: name,
             description: description,
             amount: amount,
             category: category,
-            date: new Date(purchaseDate).toISOString()
+            date: new Date(purchaseDate).toISOString(),
+            isEssential: isEssential
         };
+
+        // Learn this rule for future entries
+        const cleanName = name.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, '').trim().toLowerCase();
+        if (cleanName) {
+            this.financeData.itemPreferences[cleanName] = isEssential;
+        }
 
         this.financeData.expenses.push(expense);
         this.saveFinanceData();
@@ -5810,6 +5893,7 @@ pause
         amountInput.value = '';
         dateInput.value = new Date().toISOString().substring(0, 10);
         catInput.value = '';
+        this.setFormExpenseClassification(true);
 
         // Remove active class from buttons
         document.querySelectorAll('.preset-tags-grid .preset-tag-btn').forEach(btn => btn.classList.remove('active'));
@@ -5885,22 +5969,6 @@ pause
     }
 
     claimFinanceXP() {
-        const todayDateStr = new Date().toDateString();
-
-        // Calculate today's spent
-        const todayExpenses = this.financeData.expenses.filter(e => new Date(e.date).toDateString() === todayDateStr);
-        const todaySpent = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-        if (todaySpent <= this.financeData.dailyBudget && !this.financeData.xpBonusClaimedDates[todayDateStr]) {
-            this.financeData.xpBonusClaimedDates[todayDateStr] = true;
-            this.saveData('financeData', this.financeData);
-            const rewardXP = this.xpConfig.financeBonus || 50;
-            this.gainXP(rewardXP, "Mindful Spending Daily Bonus");
-            this.renderFinanceDashboard();
-        }
-    }
-
-    checkYesterdayFinanceXP() {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toDateString();
@@ -5909,17 +5977,22 @@ pause
         const yesterdayExpenses = this.financeData.expenses.filter(e => new Date(e.date).toDateString() === yesterdayStr);
         const yesterdaySpent = yesterdayExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-        // If stayed under budget and not claimed yet
-        if (this.financeData.dailyBudget > 0 && yesterdaySpent <= this.financeData.dailyBudget && !this.financeData.xpBonusClaimedDates[yesterdayStr]) {
-            this.financeData.xpBonusClaimedDates[yesterdayStr] = true;
-            this.saveData('financeData', this.financeData);
+        const dailyLimit = this.financeData.dailyBudget;
+        const isClaimed = this.financeData.lastClaimedBonusDate === yesterdayStr;
+        const wasUnderLimit = yesterdaySpent <= dailyLimit;
 
-            // Trigger XP gain with slight delay to ensure UI is ready
-            setTimeout(() => {
-                const rewardXP = this.xpConfig.financeBonus || 50;
-                this.gainXP(rewardXP, "Yesterday's Mindful Spending Bonus");
-            }, 800);
+        if (dailyLimit > 0 && wasUnderLimit && !isClaimed) {
+            this.financeData.lastClaimedBonusDate = yesterdayStr;
+            this.saveFinanceData();
+
+            const rewardXP = 250;
+            this.gainXP(rewardXP, "Yesterday's Mindful Spending Bonus");
+            this.renderFinanceDashboard();
         }
+    }
+
+    checkYesterdayFinanceXP() {
+        // Obsoleted in favor of manual yesterday's check button to prevent early-claim loophole.
     }
 
     renderFinanceDashboard() {
@@ -6065,34 +6138,34 @@ pause
             alertBanner.innerHTML = `✅ <div><strong>Safe Spending!</strong> Your average spending of <strong>${currency} ${avgDailySpend.toFixed(2)}/day</strong> is under the recommended limit. You are on track to finish the month with a surplus of <strong>${currency} ${remainingBalance.toFixed(2)}</strong>!</div>`;
         }
 
-        // Gamification Reward section
+        // Gamification Reward section (Yesterday's Check)
         const xpRewardCard = document.getElementById('financeXPRewardCard');
-        if (this.financeData.xpBonusClaimedDates[todayDateStr] === true) {
-            if (xpRewardCard) {
-                xpRewardCard.style.display = 'none';
-            }
-        } else {
-            if (xpRewardCard) {
+        if (xpRewardCard) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toDateString();
+
+            // Calculate yesterday's spent
+            const yesterdayExpenses = this.financeData.expenses.filter(e => new Date(e.date).toDateString() === yesterdayStr);
+            const yesterdaySpent = yesterdayExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+            const isClaimed = this.financeData.lastClaimedBonusDate === yesterdayStr;
+            const wasUnderLimit = yesterdaySpent <= dailyLimit;
+
+            if (dailyLimit > 0 && wasUnderLimit && !isClaimed) {
                 xpRewardCard.style.display = 'block';
-            }
-            if (todaySpent > dailyLimit) {
-                xpRewardStatusText.textContent = `❌ Daily limit exceeded (${currency} ${todaySpent.toFixed(2)} / ${currency} ${dailyLimit.toFixed(2)}).`;
-                xpRewardStatusText.style.color = 'var(--color-danger)';
-                if (claimBtn) {
-                    claimBtn.textContent = 'Limit Exceeded';
-                    claimBtn.disabled = true;
-                    claimBtn.style.opacity = '0.6';
-                    claimBtn.style.cursor = 'not-allowed';
+                if (xpRewardStatusText) {
+                    xpRewardStatusText.textContent = `✨ Staying under limit yesterday! (Spent: ${currency} ${yesterdaySpent.toFixed(2)} / ${currency} ${dailyLimit.toFixed(2)})`;
+                    xpRewardStatusText.style.color = 'var(--color-success)';
                 }
-            } else {
-                xpRewardStatusText.textContent = `✨ Staying under limit! Ready to claim.`;
-                xpRewardStatusText.style.color = 'var(--color-text-secondary)';
                 if (claimBtn) {
-                    claimBtn.textContent = 'Claim +' + (this.xpConfig.financeBonus || 50) + ' XP';
+                    claimBtn.textContent = "Claim Yesterday's Budget Bonus (+250 XP)";
                     claimBtn.disabled = false;
                     claimBtn.style.opacity = '1';
                     claimBtn.style.cursor = 'pointer';
                 }
+            } else {
+                xpRewardCard.style.display = 'none';
             }
         }
 
@@ -6120,11 +6193,20 @@ pause
                     const dateFormatted = `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
                     const detailsStr = exp.description ? ` <span style="font-size: 11px; font-weight: normal; color: var(--color-text-secondary); margin-left: 4px;">- ${this.escapeHtml(exp.description)}</span>` : '';
 
+                    const isEssential = this.isExpenseEssential(exp);
+                    const badgeText = isEssential ? '⭐️ Need' : '💭 Want';
+                    const badgeTitle = isEssential ? 'Marked as Need. Click to toggle to Want.' : 'Marked as Want. Click to toggle to Need.';
+                    const badgeClass = isEssential ? 'category-badge essential' : 'category-badge non-essential';
+
                     row.innerHTML = `
                         <div class="expense-details">
                             <span class="expense-name">${this.escapeHtml(exp.name)}${detailsStr}</span>
                             <div class="expense-meta">
                                 <span class="expense-tag">${this.escapeHtml(exp.category)}</span>
+                                <span>•</span>
+                                <button type="button" onclick="app.toggleExpenseEssential('${exp.id}')" class="${badgeClass}" title="${badgeTitle}" style="border: none; outline: none; border-radius: 4px; padding: 1.5px 5px; font-size: 9px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center;">
+                                    ${badgeText}
+                                </button>
                                 <span>•</span>
                                 <span>${dateFormatted}</span>
                             </div>
@@ -6140,6 +6222,9 @@ pause
                 });
             }
         }
+        
+        // Render smart recommendations
+        this.renderSavingsRecommendations();
     }
 
     // User Category Customizer Methods
@@ -6156,15 +6241,331 @@ pause
         }
     }
 
+    isCategoryEssential(cat) {
+        if (!this.financeData.essentialCategories) {
+            this.financeData.essentialCategories = {
+                'Diet & Groceries 🍏': true,
+                'Transportation 🚗': true
+            };
+        }
+        if (this.financeData.essentialCategories[cat] !== undefined) {
+            return this.financeData.essentialCategories[cat];
+        }
+        // Logical default keywords
+        const lower = cat.toLowerCase();
+        const essentialKeywords = ['grocery', 'groceries', 'diet', 'food', '🍏', 'transp', '🚗', 'rent', 'bill', 'school', 'health', 'medical', 'medic', 'pharm', 'doctor', 'hospital', 'insurance', 'dentist', 'vet'];
+        const isEssential = essentialKeywords.some(kw => lower.includes(kw));
+        this.financeData.essentialCategories[cat] = isEssential;
+        return isEssential;
+    }
+
+    toggleCategoryEssential(cat) {
+        const current = this.isCategoryEssential(cat);
+        this.financeData.essentialCategories[cat] = !current;
+        this.saveFinanceData();
+        this.renderCustomizerCategories();
+        this.renderFinanceDashboard();
+    }
+
+    isExpenseEssential(exp) {
+        if (exp.isEssential !== undefined && exp.isEssential !== null) {
+            return exp.isEssential;
+        }
+        
+        // Check rule learning preferences
+        const cleanName = exp.name.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, '').trim().toLowerCase();
+        if (cleanName && this.financeData.itemPreferences && this.financeData.itemPreferences[cleanName] !== undefined) {
+            return this.financeData.itemPreferences[cleanName];
+        }
+
+        return this.isCategoryEssential(exp.category);
+    }
+
+    toggleExpenseEssential(id) {
+        const exp = this.financeData.expenses.find(e => e.id === id);
+        if (!exp) return;
+
+        const current = this.isExpenseEssential(exp);
+        exp.isEssential = !current;
+
+        // Auto-learn preference for this item name
+        const cleanName = exp.name.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, '').trim().toLowerCase();
+        if (cleanName) {
+            this.financeData.itemPreferences[cleanName] = exp.isEssential;
+        }
+
+        this.saveFinanceData();
+        this.renderFinanceDashboard();
+    }
+
+    renderSavingsRecommendations() {
+        const container = document.getElementById('financeRecommendationsContainer');
+        if (!container) return;
+
+        const currency = this.financeData.currency || 'EGP';
+        const expenses = this.financeData.expenses || [];
+        const income = this.financeData.monthlyIncome || 0;
+        
+        if (expenses.length === 0) {
+            container.innerHTML = `
+                <div style="padding: var(--spacing-md); text-align: center; color: var(--color-text-tertiary); font-size: var(--font-size-sm);">
+                    <div style="font-size: 1.75rem; margin-bottom: 4px;">💡</div>
+                    <p style="margin: 0;">Log a few more purchases to receive personalized smart savings suggestions.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // 1. Calculate Needs vs Wants Split
+        let needsTotal = 0;
+        let wantsTotal = 0;
+        expenses.forEach(e => {
+            const isEssential = this.isExpenseEssential(e);
+            if (isEssential) {
+                needsTotal += e.amount;
+            } else {
+                wantsTotal += e.amount;
+            }
+        });
+
+        const totalSpent = needsTotal + wantsTotal;
+        const needsPct = totalSpent > 0 ? Math.round((needsTotal / totalSpent) * 100) : 0;
+        const wantsPct = totalSpent > 0 ? Math.round((wantsTotal / totalSpent) * 100) : 0;
+
+        // 2. Group expenses by normalized item name
+        const itemMap = new Map();
+        expenses.forEach(e => {
+            if (this.isExpenseEssential(e)) return; // Only recommend reducing "Wants"
+
+            const cleanName = e.name.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, '').trim().toLowerCase();
+            if (!cleanName) return;
+
+            if (!itemMap.has(cleanName)) {
+                itemMap.set(cleanName, {
+                    originalName: e.name,
+                    category: e.category,
+                    count: 0,
+                    total: 0,
+                    dates: []
+                });
+            }
+            const item = itemMap.get(cleanName);
+            item.count++;
+            item.total += e.amount;
+            item.dates.push(new Date(e.date));
+        });
+
+        // 3. Generate Recommendations
+        const recommendations = [];
+
+        // Active Goal target checking
+        const activeGoal = this.financeData.activeGoal;
+        let monthlyGoalSaving = 0;
+        if (activeGoal) {
+            monthlyGoalSaving = activeGoal.target / activeGoal.duration;
+        }
+
+        for (const [cleanName, details] of itemMap.entries()) {
+            // Recommendation Type A: Frequency reduction (bought 2 or more times)
+            if (details.count >= 2) {
+                const potentialSavings = details.total / 2; // 50% cut
+                const frequencyText = `${details.count} times`;
+                const suggestionText = `Reduce <strong>${this.escapeHtml(details.originalName)}</strong> purchases by 50%`;
+                const detailsText = `You spent ${currency} ${details.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} on this item ${frequencyText} this month.`;
+                
+                let goalProgressText = '';
+                let percentOfGoal = 0;
+                if (monthlyGoalSaving > 0) {
+                    percentOfGoal = Math.min(100, Math.round((potentialSavings / monthlyGoalSaving) * 100));
+                    goalProgressText = `Covers <strong>${percentOfGoal}%</strong> of your monthly savings target for <em>${this.escapeHtml(activeGoal.name)}</em>.`;
+                } else {
+                    goalProgressText = `Could add <strong>${currency} ${potentialSavings.toFixed(2)}</strong> to your Savings Vault monthly.`;
+                }
+
+                recommendations.push({
+                    name: details.originalName,
+                    category: details.category,
+                    savings: potentialSavings,
+                    suggestionText,
+                    detailsText,
+                    goalProgressText,
+                    percentOfGoal,
+                    actionText: `Save ${currency} ${potentialSavings.toFixed(0)}`
+                });
+            } 
+            // Recommendation Type B: Large single purchase (costs > 8% of monthly income, and only bought once)
+            else if (income > 0 && details.total > income * 0.08) {
+                const potentialSavings = details.total;
+                const suggestionText = `Evaluate if <strong>${this.escapeHtml(details.originalName)}</strong> was essential`;
+                const detailsText = `This single purchase cost ${currency} ${details.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${Math.round((details.total / income) * 100)}% of your monthly budget).`;
+                
+                let goalProgressText = '';
+                let percentOfGoal = 0;
+                if (monthlyGoalSaving > 0) {
+                    percentOfGoal = Math.min(100, Math.round((potentialSavings / monthlyGoalSaving) * 100));
+                    goalProgressText = `Skipping this next month covers <strong>${percentOfGoal}%</strong> of your target for <em>${this.escapeHtml(activeGoal.name)}</em>.`;
+                } else {
+                    goalProgressText = `Saving this amount increases your Savings Vault by <strong>${currency} ${potentialSavings.toFixed(2)}</strong>.`;
+                }
+
+                recommendations.push({
+                    name: details.originalName,
+                    category: details.category,
+                    savings: potentialSavings,
+                    suggestionText,
+                    detailsText,
+                    goalProgressText,
+                    percentOfGoal,
+                    actionText: `Save ${currency} ${potentialSavings.toFixed(0)}`
+                });
+            }
+        }
+
+        // 4. Category-wide recommendations
+        const categoryMap = new Map();
+        expenses.forEach(e => {
+            if (this.isCategoryEssential(e.category)) return;
+            categoryMap.set(e.category, (categoryMap.get(e.category) || 0) + e.amount);
+        });
+
+        for (const [category, total] of categoryMap.entries()) {
+            if (income > 0 && total > income * 0.15) {
+                const potentialSavings = total * 0.3; // 30% reduction
+                const suggestionText = `Cap spending on category <strong>${this.escapeHtml(category)}</strong>`;
+                const detailsText = `You spent ${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })} on ${this.escapeHtml(category)} (${Math.round((total / income) * 100)}% of income).`;
+                
+                let goalProgressText = '';
+                let percentOfGoal = 0;
+                if (monthlyGoalSaving > 0) {
+                    percentOfGoal = Math.min(100, Math.round((potentialSavings / monthlyGoalSaving) * 100));
+                    goalProgressText = `Reducing this by 30% covers <strong>${percentOfGoal}%</strong> of your monthly savings target for <em>${this.escapeHtml(activeGoal.name)}</em>.`;
+                } else {
+                    goalProgressText = `Reduces Wants spending by <strong>${currency} ${potentialSavings.toFixed(2)}</strong>.`;
+                }
+
+                recommendations.push({
+                    name: category,
+                    category: category,
+                    savings: potentialSavings,
+                    suggestionText,
+                    detailsText,
+                    goalProgressText,
+                    percentOfGoal,
+                    actionText: `Save ${currency} ${potentialSavings.toFixed(0)}`,
+                    isCategoryCap: true
+                });
+            }
+        }
+
+        // Sort recommendations by savings descending
+        recommendations.sort((a, b) => b.savings - a.savings);
+        const topRecommendations = recommendations.slice(0, 3);
+
+        // Render HTML structure
+        let recommendationsHtml = `
+            <div style="margin-bottom: var(--spacing-md);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase;">Needs vs. Wants Split</span>
+                    <span style="font-size: 11px; font-weight: 700; color: var(--color-text-primary);">${needsPct}% Needs / ${wantsPct}% Wants</span>
+                </div>
+                <div class="progress-bar-wants-needs" style="background: var(--color-border); height: 10px; border-radius: 5px; overflow: hidden; display: flex; margin-bottom: 4px;">
+                    <div style="background: var(--color-success); height: 100%; width: ${needsPct}%; transition: width 0.3s;" title="Needs: ${currency} ${needsTotal.toFixed(2)}"></div>
+                    <div style="background: var(--color-primary-light); height: 100%; width: ${wantsPct}%; transition: width 0.3s;" title="Wants: ${currency} ${wantsTotal.toFixed(2)}"></div>
+                </div>
+                <p style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px; margin-bottom: 0; line-height: 1.35;">
+                    Your essential Needs make up ${currency} ${needsTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })} and lifestyle Wants make up ${currency} ${wantsTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })} of your logged purchases.
+                </p>
+            </div>
+        `;
+
+        if (topRecommendations.length === 0) {
+            recommendationsHtml += `
+                <div style="padding: var(--spacing-sm) 0; text-align: center; color: var(--color-success); font-size: var(--font-size-xs); font-weight: 600;">
+                    🎉 Excellent spending discipline! All logged spending is allocated to essentials (Needs).
+                </div>
+            `;
+        } else {
+            recommendationsHtml += `
+                <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                    ${topRecommendations.map(rec => {
+                        const icon = rec.category.includes('☕') ? '☕' : (rec.category.includes('🎮') ? '🎮' : (rec.category.includes('💻') ? '💻' : '💡'));
+                        const cleanEscapedName = this.escapeHtml(rec.name).replace(/'/g, "\\'");
+                        
+                        return `
+                            <div class="recommendation-item" style="background: var(--color-surface); border: 1.5px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-sm); display: flex; flex-direction: column; gap: 4px; transition: all 0.2s;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                    <div style="display: flex; gap: 8px; align-items: flex-start; text-align: left;">
+                                        <div style="font-size: 1.25rem; margin-top: 2px;">${icon}</div>
+                                        <div>
+                                            <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-text-primary); line-height: 1.3;">
+                                                ${rec.suggestionText}
+                                            </div>
+                                            <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 2px; line-height: 1.4;">
+                                                ${rec.detailsText}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onclick="app.applyRecommendationSavings('${cleanEscapedName}', ${rec.savings})" class="btn-primary" style="font-size: 9px; padding: 4px 8px; height: auto; font-weight: 700; border-radius: 4px; background: var(--color-success); border-color: var(--color-success); color: white; white-space: nowrap; cursor: pointer; display: flex; align-items: center; justify-content: center; min-width: 60px;">
+                                        ${rec.actionText}
+                                    </button>
+                                </div>
+                                <div style="font-size: 10px; color: var(--color-primary); font-weight: 600; margin-top: 2px; border-top: 1.5px dashed var(--color-border-light); padding-top: 4px; display: flex; align-items: center; gap: 4px; text-align: left;">
+                                    🎯 ${rec.goalProgressText}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        container.innerHTML = recommendationsHtml;
+    }
+
+    applyRecommendationSavings(itemName, amount) {
+        const totalSpent = this.financeData.expenses.reduce((sum, e) => sum + e.amount, 0);
+        const remainingBalance = this.financeData.monthlyIncome - totalSpent;
+
+        if (amount > remainingBalance) {
+            alert(`Insufficient funds! Your remaining balance is only ${this.financeData.currency || 'EGP'} ${remainingBalance.toFixed(2)}. Make sure you have enough remaining balance to transfer these savings.`);
+            return;
+        }
+
+        if (confirm(`Do you want to transfer ${this.financeData.currency || 'EGP'} ${amount.toFixed(2)} from your remaining balance to your Savings Vault? \n\nThis locks in your savings for "${itemName}"!`)) {
+            this.financeData.monthlyIncome -= amount;
+            this.financeData.savingsBalance = (this.financeData.savingsBalance || 0) + amount;
+
+            // Recalculate dailyBudget using new remaining balance
+            const now = new Date();
+            const lastDayOfMonthObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const remainingDays = lastDayOfMonthObj.getDate() - now.getDate() + 1; // inclusive of today
+
+            const newRemaining = this.financeData.monthlyIncome - totalSpent;
+            this.financeData.dailyBudget = parseFloat((newRemaining / Math.max(1, remainingDays)).toFixed(2));
+
+            this.saveFinanceData();
+            this.renderFinanceDashboard();
+            alert(`Succesfully locked in savings! Added ${this.financeData.currency || 'EGP'} ${amount.toFixed(2)} to your Savings Vault. Keep it up! 🎉`);
+        }
+    }
+
     renderCustomizerCategories() {
         const list = document.getElementById('customizerCategoriesList');
         if (!list) return;
 
         list.innerHTML = this.financeData.categories.map(cat => {
+            const isEssential = this.isCategoryEssential(cat);
+            const badgeText = isEssential ? '⭐️ Need' : '💭 Want';
+            const badgeTitle = isEssential ? 'Category classified as Need. Click to toggle to Want.' : 'Category classified as Want. Click to toggle to Need.';
+            const badgeClass = isEssential ? 'category-badge essential' : 'category-badge non-essential';
+
             return `
-                <div class="preset-tag-btn" style="cursor: default; display: inline-flex; align-items: center; gap: 4px;">
-                    <span>${cat}</span>
-                    <span onclick="app.removeCustomCategory('${this.escapeHtml(cat)}')" style="color: var(--color-danger); cursor: pointer; font-weight: 800; font-size: 1.15rem; margin-left: 2px; line-height: 1;">&times;</span>
+                <div class="preset-tag-btn" style="cursor: default; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-xs) var(--spacing-sm); margin-bottom: 2px;">
+                    <span style="font-weight: 600; font-size: 11px;">${this.escapeHtml(cat)}</span>
+                    <button type="button" onclick="app.toggleCategoryEssential('${this.escapeHtml(cat)}')" class="${badgeClass}" title="${badgeTitle}" style="border: none; outline: none; border-radius: 4px; padding: 2px 6px; font-size: 9px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                        ${badgeText}
+                    </button>
+                    <span onclick="app.removeCustomCategory('${this.escapeHtml(cat)}')" style="color: var(--color-danger); cursor: pointer; font-weight: 800; font-size: 1.15rem; margin-left: 2px; line-height: 1;" title="Remove Category">&times;</span>
                 </div>
             `;
         }).join('');
@@ -6390,25 +6791,46 @@ pause
         this.renderFinanceDashboard();
     }
 
-    // Transfer to Savings Vault
-    handleTransferToSavings(event) {
+    // Transfer between Account and Savings Vault
+    handleTransferSavings(event) {
         if (event) event.preventDefault();
+        
+        const directionSelect = document.getElementById('transferDirection');
         const amountInput = document.getElementById('transferSavingsAmount');
-        if (!amountInput) return;
+        if (!directionSelect || !amountInput) return;
 
         const amount = parseFloat(amountInput.value);
         if (isNaN(amount) || amount <= 0) return;
 
+        const direction = directionSelect.value; // 'deposit' or 'withdraw'
         const totalSpent = this.financeData.expenses.reduce((sum, e) => sum + e.amount, 0);
-        const remainingBalance = this.financeData.monthlyIncome - totalSpent;
+        const currency = this.financeData.currency || 'EGP';
 
-        if (amount > remainingBalance) {
-            alert(`Insufficient funds! Your remaining balance is only ${this.financeData.currency || 'EGP'} ${remainingBalance.toFixed(2)}.`);
-            return;
+        if (direction === 'deposit') {
+            const remainingBalance = this.financeData.monthlyIncome - totalSpent;
+            if (amount > remainingBalance) {
+                alert(`Insufficient funds! Your remaining balance is only ${currency} ${remainingBalance.toFixed(2)}.`);
+                return;
+            }
+
+            this.financeData.monthlyIncome -= amount;
+            this.financeData.savingsBalance = (this.financeData.savingsBalance || 0) + amount;
+            alert(`Successfully deposited ${currency} ${amount.toFixed(2)} to your Savings Vault! 📥`);
+        } else if (direction === 'withdraw') {
+            const currentSavings = this.financeData.savingsBalance || 0;
+            if (amount > currentSavings) {
+                alert(`Insufficient savings! You only have ${currency} ${currentSavings.toFixed(2)} in your Savings Vault.`);
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to withdraw ${currency} ${amount.toFixed(2)} from your Savings Vault back into your account? \n\nThis will increase your monthly budget limit.`)) {
+                return;
+            }
+
+            this.financeData.savingsBalance = currentSavings - amount;
+            this.financeData.monthlyIncome = (this.financeData.monthlyIncome || 0) + amount;
+            alert(`Successfully withdrew ${currency} ${amount.toFixed(2)} to your account! 📤`);
         }
-
-        this.financeData.monthlyIncome -= amount;
-        this.financeData.savingsBalance = (this.financeData.savingsBalance || 0) + amount;
 
         // Recalculate dailyBudget using new remaining balance
         const now = new Date();
