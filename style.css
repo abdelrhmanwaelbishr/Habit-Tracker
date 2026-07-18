@@ -76,21 +76,61 @@
     /* Sidebar Widths */
     --sidebar-width: 250px;
     --sidebar-width-minimized: 78px;
+
+    /* Checkbox Borders */
+    --color-checkbox-border: #D1D5DB;
+    --color-checkbox-border-hover: #9CA3AF;
 }
 
-/* Dark Theme */
+/* Explicit Light Mode Override (if system is dark but user toggled light theme) */
+body.light-theme {
+    --color-primary: #0F172A;
+    --color-primary-light: #334155;
+    --color-primary-dark: #000000;
+    --color-primary-contrast: #FFFFFF;
+
+    --color-secondary: #38BDF8;
+    --color-secondary-light: #7DD3FC;
+    --color-secondary-dark: #0284C7;
+
+    --color-success: #22C55E;
+    --color-success-light: #4ADE80;
+    --color-success-bg: #F0FDF4;
+
+    --color-warning: #F59E0B;
+    --color-warning-light: #FBBF24;
+    --color-warning-bg: #FFFBEB;
+
+    --color-danger: #EF4444;
+    --color-danger-light: #F87171;
+    --color-danger-bg: #FEF2F2;
+
+    --color-bg: #F1F5F9;
+    --color-surface: #FFFFFF;
+    --color-border: #CBD5E1;
+    --color-border-light: #F0F9FF;
+
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #64748B;
+    --color-text-tertiary: #94A3B8;
+
+    --color-checkbox-border: #D1D5DB;
+    --color-checkbox-border-hover: #9CA3AF;
+}
+
+/* Dark Theme Variables */
 body.dark-theme {
     --color-primary: #FFFFFF;
     --color-primary-light: #F1F5F9;
     --color-primary-dark: #CBD5E1;
     --color-primary-contrast: #0F172A;
 
-    --color-bg: #0F172A;
-    --color-surface: #1E293B;
-    --color-border: #334155;
-    --color-border-light: #1E293B;
+    --color-bg: #121212;
+    --color-surface: #1E1E1E;
+    --color-border: #333333;
+    --color-border-light: #2D3748;
 
-    --color-text-primary: #F8FAFC;
+    --color-text-primary: #E2E8F0;
     --color-text-secondary: #CBD5E1;
     --color-text-tertiary: #94A3B8;
 
@@ -98,10 +138,45 @@ body.dark-theme {
     --color-warning-bg: #451A03;
     --color-danger-bg: #450A0A;
 
+    --color-checkbox-border: #444444;
+    --color-checkbox-border-hover: #555555;
+
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
     --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* System Preference Dark Mode Query */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light-theme) body:not(.light-theme),
+    :root:not(.light-theme) {
+        --color-primary: #FFFFFF;
+        --color-primary-light: #F1F5F9;
+        --color-primary-dark: #CBD5E1;
+        --color-primary-contrast: #0F172A;
+
+        --color-bg: #121212;
+        --color-surface: #1E1E1E;
+        --color-border: #333333;
+        --color-border-light: #2D3748;
+
+        --color-text-primary: #E2E8F0;
+        --color-text-secondary: #CBD5E1;
+        --color-text-tertiary: #94A3B8;
+
+        --color-success-bg: #052E16;
+        --color-warning-bg: #451A03;
+        --color-danger-bg: #450A0A;
+
+        --color-checkbox-border: #444444;
+        --color-checkbox-border-hover: #555555;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+        --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.5);
+    }
 }
 
 /* Reset & Base */
@@ -1404,7 +1479,7 @@ body.dark-theme .task-item:hover {
     width: 22px;
     height: 22px;
     min-width: 22px;
-    border: 2px solid #D1D5DB;
+    border: 2px solid var(--color-checkbox-border);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1415,7 +1490,7 @@ body.dark-theme .task-item:hover {
 }
 
 .task-checkbox:hover {
-    border-color: #9CA3AF;
+    border-color: var(--color-checkbox-border-hover);
     transform: scale(1.1);
 }
 

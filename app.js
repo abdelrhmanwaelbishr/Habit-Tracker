@@ -344,12 +344,14 @@ class ProductivityHub {
     // ============================================
 
     applyTheme() {
-        const theme = localStorage.getItem('theme') || 'light';
+        const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         const isDark = theme === 'dark';
         if (isDark) {
             document.body.classList.add('dark-theme');
+            document.body.classList.remove('light-theme');
         } else {
             document.body.classList.remove('dark-theme');
+            document.body.classList.add('light-theme');
         }
 
         let accentColor = localStorage.getItem('accentColor');
@@ -371,6 +373,11 @@ class ProductivityHub {
     toggleTheme() {
         document.body.classList.toggle('dark-theme');
         const isDark = document.body.classList.contains('dark-theme');
+        if (isDark) {
+            document.body.classList.remove('light-theme');
+        } else {
+            document.body.classList.add('light-theme');
+        }
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
         const accentColor = localStorage.getItem('accentColor');
