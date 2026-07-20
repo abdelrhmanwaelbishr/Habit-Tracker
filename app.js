@@ -6248,7 +6248,7 @@ pause
                 });
             }
         }
-        
+
         // Render smart recommendations
         this.renderSavingsRecommendations();
     }
@@ -6297,7 +6297,7 @@ pause
         if (exp.isEssential !== undefined && exp.isEssential !== null) {
             return exp.isEssential;
         }
-        
+
         // Check rule learning preferences
         const cleanName = exp.name.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, '').trim().toLowerCase();
         if (cleanName && this.financeData.itemPreferences && this.financeData.itemPreferences[cleanName] !== undefined) {
@@ -6331,7 +6331,7 @@ pause
         const currency = this.financeData.currency || 'EGP';
         const expenses = this.financeData.expenses || [];
         const income = this.financeData.monthlyIncome || 0;
-        
+
         if (expenses.length === 0) {
             container.innerHTML = `
                 <div style="padding: var(--spacing-md); text-align: center; color: var(--color-text-tertiary); font-size: var(--font-size-sm);">
@@ -6398,7 +6398,7 @@ pause
                 const frequencyText = `${details.count} times`;
                 const suggestionText = `Reduce <strong>${this.escapeHtml(details.originalName)}</strong> purchases by 50%`;
                 const detailsText = `You spent ${currency} ${details.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} on this item ${frequencyText} this month.`;
-                
+
                 let goalProgressText = '';
                 let percentOfGoal = 0;
                 if (monthlyGoalSaving > 0) {
@@ -6418,13 +6418,13 @@ pause
                     percentOfGoal,
                     actionText: `Save ${currency} ${potentialSavings.toFixed(0)}`
                 });
-            } 
+            }
             // Recommendation Type B: Large single purchase (costs > 8% of monthly income, and only bought once)
             else if (income > 0 && details.total > income * 0.08) {
                 const potentialSavings = details.total;
                 const suggestionText = `Evaluate if <strong>${this.escapeHtml(details.originalName)}</strong> was essential`;
                 const detailsText = `This single purchase cost ${currency} ${details.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${Math.round((details.total / income) * 100)}% of your monthly budget).`;
-                
+
                 let goalProgressText = '';
                 let percentOfGoal = 0;
                 if (monthlyGoalSaving > 0) {
@@ -6459,7 +6459,7 @@ pause
                 const potentialSavings = total * 0.3; // 30% reduction
                 const suggestionText = `Cap spending on category <strong>${this.escapeHtml(category)}</strong>`;
                 const detailsText = `You spent ${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })} on ${this.escapeHtml(category)} (${Math.round((total / income) * 100)}% of income).`;
-                
+
                 let goalProgressText = '';
                 let percentOfGoal = 0;
                 if (monthlyGoalSaving > 0) {
@@ -6514,10 +6514,10 @@ pause
             recommendationsHtml += `
                 <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
                     ${topRecommendations.map(rec => {
-                        const icon = rec.category.includes('☕') ? '☕' : (rec.category.includes('🎮') ? '🎮' : (rec.category.includes('💻') ? '💻' : '💡'));
-                        const cleanEscapedName = this.escapeHtml(rec.name).replace(/'/g, "\\'");
-                        
-                        return `
+                const icon = rec.category.includes('☕') ? '☕' : (rec.category.includes('🎮') ? '🎮' : (rec.category.includes('💻') ? '💻' : '💡'));
+                const cleanEscapedName = this.escapeHtml(rec.name).replace(/'/g, "\\'");
+
+                return `
                             <div class="recommendation-item" style="background: var(--color-surface); border: 1.5px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-sm); display: flex; flex-direction: column; gap: 4px; transition: all 0.2s;">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
                                     <div style="display: flex; gap: 8px; align-items: flex-start; text-align: left;">
@@ -6540,7 +6540,7 @@ pause
                                 </div>
                             </div>
                         `;
-                    }).join('')}
+            }).join('')}
                 </div>
             `;
         }
@@ -6894,7 +6894,7 @@ pause
     // Transfer between Account and Savings Vault
     handleTransferSavings(event) {
         if (event) event.preventDefault();
-        
+
         const directionSelect = document.getElementById('transferDirection');
         const amountInput = document.getElementById('transferSavingsAmount');
         if (!directionSelect || !amountInput) return;
