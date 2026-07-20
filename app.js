@@ -6060,11 +6060,10 @@ pause
         remainingText.textContent = `${currency} ${remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
         // Render Savings Vault Value
-        const vaultVal = document.getElementById('financeSavingsVaultVal');
-        if (vaultVal) {
+        document.querySelectorAll('.financeSavingsVaultVal, #financeSavingsVaultVal').forEach(el => {
             const savingsBal = this.financeData.savingsBalance || 0;
-            vaultVal.textContent = `${currency} ${savingsBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        }
+            el.textContent = `${currency} ${savingsBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        });
 
         // Render Savings Goal Planner progress bar
         const goalContainer = document.getElementById('financeActiveGoalContainer');
@@ -6791,6 +6790,80 @@ pause
         this.saveFinanceData();
         this.renderFinanceDashboard();
         alert(`Successfully injected ${currency} ${amount.toFixed(2)} into your monthly budget!`);
+    }
+
+    // Prompt-based Vault Transfer from Stat Card
+    showVaultTransferPrompt() {
+        const currency = this.financeData.currency || 'EGP';
+        const currentSavings = this.financeData.savingsBalance || 0;
+        const totalSpent = this.financeData.expenses.reduce((sum, e) => sum + e.amount, 0);
+        const remainingBalance = this.financeData.monthlyIncome - totalSpent;
+
+        const choice = prompt(
+            `🏦 Savings Vault (${currency} ${currentSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n` +
+            `Available Budget: ${currency} ${remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n` +
+            `Type 1 to DEPOSIT (Budget -> Vault)\n` +
+            `Type 2 to WITHDRAW (Vault -> Budget):`
+        );
+
+        if (!choice) return;
+        const action = choice.trim();
+
+        if (action === '1') {
+            const amountStr = prompt(`Enter amount to DEPOSIT into Savings Vault (${currency}):`);
+            if (!amountStr) return;
+            const amount = parseFloat(amountStr);
+            if (isNaN(amount) || amount <= 0) {
+                alert("Invalid amount entered.");
+                return;
+            }
+            if (amount > remainingBalance) {
+                alert(`Insufficient funds! Your available budget is ${currency} ${remainingBalance.toFixed(2)}.`);
+                return;
+            }
+            this.financeData.monthlyIncome -= amount;
+            this.financeData.savingsBalance = currentSavings + amount;
+
+            const now = new Date();
+            const lastDayOfMonthObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const remainingDays = lastDayOfMonthObj.getDate() - now.getDate() + 1;
+            const newRemaining = this.financeData.monthlyIncome - totalSpent;
+            this.financeData.dailyBudget = parseFloat((newRemaining / Math.max(1, remainingDays)).toFixed(2));
+
+            this.saveFinanceData();
+            this.renderFinanceDashboard();
+            alert(`Successfully deposited ${currency} ${amount.toFixed(2)} into your Savings Vault! 📥`);
+        } else if (action === '2') {
+            if (currentSavings <= 0) {
+                alert("Your Savings Vault is currently empty.");
+                return;
+            }
+            const amountStr = prompt(`Enter amount to WITHDRAW from Savings Vault (${currency}):`);
+            if (!amountStr) return;
+            const amount = parseFloat(amountStr);
+            if (isNaN(amount) || amount <= 0) {
+                alert("Invalid amount entered.");
+                return;
+            }
+            if (amount > currentSavings) {
+                alert(`Cannot withdraw more than your current vault balance (${currency} ${currentSavings.toFixed(2)}).`);
+                return;
+            }
+            this.financeData.savingsBalance = currentSavings - amount;
+            this.financeData.monthlyIncome += amount;
+
+            const now = new Date();
+            const lastDayOfMonthObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const remainingDays = lastDayOfMonthObj.getDate() - now.getDate() + 1;
+            const newRemaining = this.financeData.monthlyIncome - totalSpent;
+            this.financeData.dailyBudget = parseFloat((newRemaining / Math.max(1, remainingDays)).toFixed(2));
+
+            this.saveFinanceData();
+            this.renderFinanceDashboard();
+            alert(`Successfully withdrew ${currency} ${amount.toFixed(2)} from Savings Vault back to your budget! 📤`);
+        } else {
+            alert("Invalid option selected. Please enter 1 or 2.");
+        }
     }
 
     // Mid-Month Add Funds

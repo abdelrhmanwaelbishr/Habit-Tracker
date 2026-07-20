@@ -845,6 +845,23 @@
                         </div>
                     </div>
 
+                    <!-- Savings Vault Stat -->
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #DCFCE7, #86EFAC); color: #15803D;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-content" style="flex: 1; display: flex; flex-direction: column;">
+                            <p class="stat-label">Savings Vault</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-xs); flex-wrap: wrap;">
+                                <p class="stat-value financeSavingsVaultVal" id="financeSavingsVaultVal" style="margin-bottom: 0;">EGP 0.00</p>
+                                <button type="button" onclick="app.showVaultTransferPrompt()" class="btn-primary" style="font-size: 11px; padding: 4px 10px; height: 26px; border-radius: var(--radius-md); font-weight: 700; background: var(--color-success); border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: white;">⇄ Transfer</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Recommended Daily Limit Stat -->
                     <div class="stat-card">
                         <div class="stat-icon stat-icon-orange">
@@ -963,33 +980,53 @@
                             </form>
                         </div>
 
-                        <!-- Vault & Budget Controls -->
+                        <!-- Savings Goal Planner -->
                         <div class="finance-card">
-                            <h3 class="finance-card-title">🏦 Savings Vault & Adjustments</h3>
+                            <h3 class="finance-card-title">🎯 Save Up to Goal</h3>
+                            <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--spacing-md); line-height: 1.4;">
+                                Set target items and let the smart engine suggest monthly savings configurations.
+                            </p>
                             
-                            <!-- Savings Vault Balance Display -->
-                            <div style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(14, 165, 160, 0.08)); border: 2.5px dashed var(--color-success); border-radius: var(--radius-lg); padding: var(--spacing-md); text-align: center; margin-bottom: var(--spacing-lg);">
-                                <span style="font-size: 2rem; display: block; margin-bottom: 2px;">🏦</span>
-                                <span style="font-size: 10px; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Savings Vault Balance</span>
-                                <span id="financeSavingsVaultVal" style="font-weight: 800; font-size: var(--font-size-2xl); color: var(--color-success); display: block;">EGP 0.00</span>
-                            </div>
-
-                            <!-- Transfer between Account and Vault -->
-                            <form id="transferSavingsForm" onsubmit="app.handleTransferSavings(event)" style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
-                                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--spacing-xs); align-items: flex-end;">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label for="transferDirection" class="form-label" style="font-size: 11px;">Transaction Type</label>
-                                        <select id="transferDirection" class="form-input" style="height: 38px; padding: 0 10px; font-size: var(--font-size-xs); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg); font-weight: 600;">
-                                            <option value="deposit">📥 Deposit to Vault</option>
-                                            <option value="withdraw">📤 Withdraw to Account</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label for="transferSavingsAmount" class="form-label" style="font-size: 11px;">Amount</label>
-                                        <input type="number" id="transferSavingsAmount" class="form-input" step="0.01" min="0.01" placeholder="0.00" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs); border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg);">
+                            <!-- Active Goal Progress Display -->
+                            <div id="financeActiveGoalContainer" style="display: none; background: var(--color-bg); padding: var(--spacing-md); border-radius: var(--radius-lg); border: 1.5px solid var(--color-border); margin-bottom: var(--spacing-md);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span id="financeActiveGoalName" style="font-weight: 700; color: var(--color-text-primary); font-size: var(--font-size-sm);">Active Goal: iPad Pro</span>
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                        <a href="#" onclick="app.editActiveGoal(event)" style="font-size: 11px; color: var(--color-primary); font-weight: 700; text-decoration: underline; cursor: pointer; margin-right: 6px;">✏️ Edit</a>
+                                        <a href="#" onclick="app.deleteActiveGoal(event)" style="font-size: 11px; color: var(--color-danger); font-weight: 700; text-decoration: underline; cursor: pointer; margin-right: 12px;">🗑️ Remove</a>
+                                        <span id="financeActiveGoalProgressPct" style="font-weight: 700; color: var(--color-primary); font-size: var(--font-size-xs);">25%</span>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn-primary" style="font-size: var(--font-size-xs); padding: 0 var(--spacing-md); height: 38px; font-weight: 700; justify-content: center; background: var(--color-success); border-color: var(--color-success);">Confirm Transfer</button>
+                                <div style="background: var(--color-border); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
+                                    <div id="financeActiveGoalProgressBar" style="background: var(--color-primary); height: 100%; width: 25%; transition: width 0.3s;"></div>
+                                </div>
+                                <p id="financeActiveGoalStatus" style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 0;"></p>
+                            </div>
+
+                            <form id="goalPlannerForm" onsubmit="app.handleSetActiveGoal(event)" style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="goalNameInput" class="form-label" style="font-size: 11px;">Goal / Item Name</label>
+                                    <input type="text" id="goalNameInput" class="form-input" placeholder="e.g. New Laptop, Vacation" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs);">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="goalTargetInput" class="form-label" style="font-size: 11px;">Target Amount</label>
+                                        <input type="number" id="goalTargetInput" class="form-input" placeholder="0.00" min="1" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs);" oninput="app.updateGoalSuggestions()">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="goalDurationInput" class="form-label" style="font-size: 11px;">Desired Duration (Months)</label>
+                                        <input type="number" id="goalDurationInput" class="form-input" placeholder="e.g. 6" min="1" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs);" oninput="app.updateGoalSuggestions()">
+                                    </div>
+                                </div>
+                                
+                                <!-- Suggestions Engine Panel -->
+                                <div id="goalSuggestionsPanel" style="display: none; background: var(--color-bg); padding: var(--spacing-sm); border-radius: var(--radius-md); border: 1.5px dashed var(--color-border); font-size: 11px; line-height: 1.4;">
+                                    <!-- Rendered dynamically -->
+                                </div>
+
+                                <button type="submit" class="btn-primary" style="justify-content: center; height: 38px; font-weight: 700; margin-top: var(--spacing-xs); font-size: var(--font-size-xs);">
+                                    Set Active Goal
+                                </button>
                             </form>
                         </div>
                     </div>
@@ -1043,56 +1080,6 @@
                                     <!-- Rendered dynamically -->
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Savings Goal Planner -->
-                        <div class="finance-card">
-                            <h3 class="finance-card-title">🎯 Save Up to Goal</h3>
-                            <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--spacing-md); line-height: 1.4;">
-                                Set target items and let the smart engine suggest monthly savings configurations.
-                            </p>
-                            
-                            <!-- Active Goal Progress Display -->
-                            <div id="financeActiveGoalContainer" style="display: none; background: var(--color-bg); padding: var(--spacing-md); border-radius: var(--radius-lg); border: 1.5px solid var(--color-border); margin-bottom: var(--spacing-md);">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span id="financeActiveGoalName" style="font-weight: 700; color: var(--color-text-primary); font-size: var(--font-size-sm);">Active Goal: iPad Pro</span>
-                                    <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
-                                        <a href="#" onclick="app.editActiveGoal(event)" style="font-size: 11px; color: var(--color-primary); font-weight: 700; text-decoration: underline; cursor: pointer; margin-right: 6px;">✏️ Edit</a>
-                                        <a href="#" onclick="app.deleteActiveGoal(event)" style="font-size: 11px; color: var(--color-danger); font-weight: 700; text-decoration: underline; cursor: pointer; margin-right: 12px;">🗑️ Remove</a>
-                                        <span id="financeActiveGoalProgressPct" style="font-weight: 700; color: var(--color-primary); font-size: var(--font-size-xs);">25%</span>
-                                    </div>
-                                </div>
-                                <div style="background: var(--color-border); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
-                                    <div id="financeActiveGoalProgressBar" style="background: var(--color-primary); height: 100%; width: 25%; transition: width 0.3s;"></div>
-                                </div>
-                                <p id="financeActiveGoalStatus" style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 0;"></p>
-                            </div>
-
-                            <form id="goalPlannerForm" onsubmit="app.handleSetActiveGoal(event)" style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label for="goalNameInput" class="form-label" style="font-size: 11px;">Goal / Item Name</label>
-                                    <input type="text" id="goalNameInput" class="form-input" placeholder="e.g. New Laptop, Vacation" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs);">
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label for="goalTargetInput" class="form-label" style="font-size: 11px;">Target Amount</label>
-                                        <input type="number" id="goalTargetInput" class="form-input" placeholder="0.00" min="1" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs);" oninput="app.updateGoalSuggestions()">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label for="goalDurationInput" class="form-label" style="font-size: 11px;">Desired Duration (Months)</label>
-                                        <input type="number" id="goalDurationInput" class="form-input" placeholder="e.g. 6" min="1" required style="height: 38px; padding: 6px 12px; font-size: var(--font-size-xs);" oninput="app.updateGoalSuggestions()">
-                                    </div>
-                                </div>
-                                
-                                <!-- Suggestions Engine Panel -->
-                                <div id="goalSuggestionsPanel" style="display: none; background: var(--color-bg); padding: var(--spacing-sm); border-radius: var(--radius-md); border: 1.5px dashed var(--color-border); font-size: 11px; line-height: 1.4;">
-                                    <!-- Rendered dynamically -->
-                                </div>
-
-                                <button type="submit" class="btn-primary" style="justify-content: center; height: 38px; font-weight: 700; margin-top: var(--spacing-xs); font-size: var(--font-size-xs);">
-                                    Set Active Goal
-                                </button>
-                            </form>
                         </div>
 
                         <!-- Smart Savings Recommendations -->
